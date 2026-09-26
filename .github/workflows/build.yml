@@ -28,6 +28,17 @@ jobs:
       - name: Generate missing Android and Gradle files
         run: flutter create . --platforms=android --project-name=renault_obd_scanner
 
+      - name: Fix Kotlin version conflict
+        run: |
+          echo "" >> android/app/build.gradle
+          echo "configurations.all {" >> android/app/build.gradle
+          echo "    resolutionStrategy {" >> android/app/build.gradle
+          echo "        force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'" >> android/app/build.gradle
+          echo "        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'" >> android/app/build.gradle
+          echo "        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'" >> android/app/build.gradle
+          echo "    }" >> android/app/build.gradle
+          echo "}" >> android/app/build.gradle
+
       - name: Install dependencies
         run: flutter pub get
 
