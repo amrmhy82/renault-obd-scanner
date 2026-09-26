@@ -25,6 +25,9 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Generate missing Android and Gradle files
+        run: flutter create . --platforms=android --project-name=renault_obd_scanner
+
       - name: Install dependencies
         run: flutter pub get
 
