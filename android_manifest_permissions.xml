@@ -1,0 +1,19 @@
+<!--
+أضف هذه الأسطر داخل وسم <manifest> في الملف:
+android/app/src/main/AndroidManifest.xml
+(قبل وسم <application>)
+-->
+
+<uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+<!--
+ملاحظة: android:usesPermissionFlags يتطلب إضافة xmlns:tools="http://schemas.android.com/tools"
+إلى وسم <manifest> إن لم يكن موجودًا:
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+-->
