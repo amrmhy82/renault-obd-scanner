@@ -1,5 +1,5 @@
-name: renault_obd_scanner
-description: تطبيق سكانر OBD2 عبر محول ELM327 (بلوتوث كلاسيك) لسيارة رينو فلوانس 2017
+name: matal_fluence_scan
+description: تطبيق ماتال - سكانر OBD2 عبر محول ELM327 (بلوتوث كلاسيك) لسيارة رينو فلوانس 2017
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -24,8 +24,23 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  # يولّد أيقونة التطبيق لكل الأحجام المطلوبة من صورة واحدة
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
   assets:
     - assets/dtc_codes_ar.json
+    - assets/icon/app_icon.png
+
+# إعدادات مولّد أيقونة التطبيق — شغّل الأمر التالي بعد flutter pub get:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  # خلفية بيضاء لتطابق خلفية الشعار الأصلية، مع نفس الصورة كطبقة أمامية
+  # لأيقونات أندرويد المتكيفة (Adaptive Icons)
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"

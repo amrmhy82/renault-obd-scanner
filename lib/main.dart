@@ -11,7 +11,7 @@ class RenaultObdApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'رينو فلوانس OBD2 سكانر',
+      title: 'Matal Fluence Scan',
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar'),
       theme: ThemeData(
