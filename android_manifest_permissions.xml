@@ -2,6 +2,12 @@
 أضف هذه الأسطر داخل وسم <manifest> في الملف:
 android/app/src/main/AndroidManifest.xml
 (قبل وسم <application>)
+
+⚠️ تحديدًا BLUETOOTH_SCAN وBLUETOOTH_CONNECT هما السطران اللي يُنسيان أكثر
+شيء، لأن المشروع كان يعمل بدونهما على أندرويد القديم فقط. أندرويد 12 فأعلى
+يرفض البحث عن الأجهزة (startDiscovery) أو حتى قراءة الأجهزة المقترنة
+(getBondedDevices) بدونهما تحديدًا، برسالة خطأ من نوع:
+"Need android.permission.BLUETOOTH_CONNECT permission"
 -->
 
 <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
@@ -12,8 +18,12 @@ android/app/src/main/AndroidManifest.xml
 
 <!--
 ملاحظة: android:usesPermissionFlags يتطلب إضافة xmlns:tools="http://schemas.android.com/tools"
-إلى وسم <manifest> إن لم يكن موجودًا:
+إلى وسم <manifest> إن لم يكن موجودًا — وإلا سيفشل البناء بخطأ XML:
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
+✅ تحقّق سريع بعد الإضافة: افتح الملف وابحث عن كلمة "BLUETOOTH_CONNECT" —
+لازم تجدها. لو مو موجودة، الإضافة ما انحفظت.
 -->
+
