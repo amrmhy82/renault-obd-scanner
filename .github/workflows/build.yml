@@ -3,6 +3,7 @@ name: Build Flutter APK
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:   # يسمح بتشغيله يدويًا من تبويب Actions
 
 jobs:
   build:
@@ -25,8 +26,10 @@ jobs:
           channel: 'stable'
           cache: true
 
+      # يولّد مجلد android/ من جديد في كل تشغيل (المستودع لا يحتوي android/)
+      # ملاحظة: --project-name لازم يطابق name: في pubspec.yaml
       - name: Generate missing Android and Gradle files
-        run: flutter create . --platforms=android --project-name=renault_obd_scanner
+        run: flutter create . --platforms=android --project-name=matal_fluence_scan --org com.matal
 
       - name: Fix Kotlin version conflict
         run: |
@@ -41,6 +44,15 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      # يضيف صلاحيات البلوتوث (CONNECT/SCAN) + اسم التطبيق + minSdk=21.
+      # هذه الخطوة كانت ناقصة، وغيابها هو سبب خطأ BLUETOOTH_CONNECT permission.
+      - name: Patch AndroidManifest and Gradle (permissions, label, minSdk)
+        run: dart run tool/setup_android.dart
+
+      # يولّد أيقونة Matal بدل أيقونة Flutter الافتراضية.
+      - name: Generate app icon
+        run: dart run flutter_launcher_icons
 
       - name: Build APK
         run: flutter build apk --release
