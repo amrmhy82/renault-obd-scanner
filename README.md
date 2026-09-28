@@ -92,6 +92,20 @@ flutter build apk --release
 # الملف الناتج في: build/app/outputs/flutter-apk/app-release.apk
 ```
 
+## البناء عبر GitHub Actions (الطريقة المعتمدة في هذا المشروع)
+المستودع **لا يحتوي مجلد `android/`**؛ الـ workflow (`.github/workflows/build.yml`) يولّده من جديد في كل
+تشغيل عبر `flutter create`. لذلك أي تعديل يدوي على `android/` يضيع، ولهذا كل تعديل أندرويد مؤتمت في
+`tool/setup_android.dart` ويُشغَّل داخل الـ workflow بالترتيب:
+`flutter create` ← `flutter pub get` ← **`dart run tool/setup_android.dart`** ← **`dart run flutter_launcher_icons`** ← `flutter build apk`.
+
+السكربت يضمن: صلاحيات `BLUETOOTH_CONNECT`/`BLUETOOTH_SCAN`، اسم التطبيق "Matal Fluence Scan"،
+و`minSdk = 21` (مطلوب لمكتبة BLE؛ قالب Flutter 3.19 يضع 19 فيفشل البناء بدونه).
+في سجل الـ Actions ابحث عن أسطر ✔ الخاصة بالصلاحيات للتأكد.
+
+**ملاحظات عند التثبيت:**
+- `--org com.matal` يغيّر معرّف التطبيق إلى `com.matal.matal_fluence_scan`، فيُثبَّت كتطبيق منفصل عن النسخة القديمة (`com.example.renault_obd_scanner`) — احذف القديمة.
+- النسخ الموقّعة بمفتاح debug يولَّد في كل تشغيل CI تتعارض توقيعاتها؛ إن ظهر "لم يتم تثبيت التطبيق" فاحذف النسخة السابقة أولًا.
+
 ## طريقة الاستخدام
 1. وصّل المحول بمنفذ OBD2 وأدر مفتاح السيارة إلى ACC أو ON (المحول لا يعمل ولا يبث بلوتوث بدون طاقة السيارة).
 2. افتح التطبيق واختر نوع المحول من أعلى الشاشة:

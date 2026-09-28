@@ -2,6 +2,7 @@
 //   1) يضيف xmlns:tools إن كان مفقودًا
 //   2) يضيف صلاحيات البلوتوث الناقصة فقط (لا يكرر الموجود)
 //   3) يضبط الاسم الظاهر تحت الأيقونة إلى "Matal Fluence Scan"
+//   4) يرفع minSdk إلى 21 (مكتبة BLE تتطلبه، وقالب Flutter 3.19 يضع 19 فيفشل البناء)
 //
 // التشغيل (من جذر مشروع Flutter، بعد flutter create ونسخ الملفات):
 //   dart run tool/setup_android.dart
@@ -70,6 +71,27 @@ void main() {
     xml = xml.replaceFirstMapped(labelRegex, (m) => 'android:label="$kAppLabel"');
   } else {
     stdout.writeln('⚠️ لم أجد android:label في وسم application — عدّله يدويًا إن أردت.');
+  }
+
+  // 4) الحد الأدنى لإصدار أندرويد: flutter_blue_plus يتطلب 21 على الأقل، بينما
+  //    قوالب Flutter القديمة (مثل 3.19) تضع flutter.minSdkVersion = 19.
+  for (final path in ['android/app/build.gradle', 'android/app/build.gradle.kts']) {
+    final g = File(path);
+    if (!g.existsSync()) continue;
+    final src = g.readAsStringSync();
+    final re = RegExp(r'(minSdk(?:Version)?)(\s*=?\s*)(flutter\.minSdkVersion|\d+)');
+    final patched = src.replaceAllMapped(re, (m) {
+      final n = int.tryParse(m[3]!);
+      if (n != null && n >= 21) return m[0]!; // مناسب أصلًا
+      return '${m[1]}${m[2]}21';
+    });
+    if (patched != src) {
+      File('$path.bak').writeAsStringSync(src);
+      g.writeAsStringSync(patched);
+      stdout.writeln('➕ رُفع minSdk إلى 21 في $path');
+    } else {
+      stdout.writeln('✔ minSdk في $path مناسب أصلًا');
+    }
   }
 
   if (xml != original) {
