@@ -12,6 +12,9 @@ dependencies:
   # ملاحظة: هذه الحزمة تتعامل مع بلوتوث كلاسيك (SPP) وهو ما تستخدمه أغلب محولات ELM327 الرخيصة.
   # إذا واجهت مشاكل بالتوافق عند flutter pub get، جرّب البديل: flutter_bluetooth_serial_ble
   flutter_bluetooth_serial: ^0.4.0
+  # بلوتوث BLE (بلوتوث 4.0 منخفض الطاقة) لمحولات ELM327 الحديثة الصغيرة.
+  # مثبّتة على سلسلة 1.x عمدًا: الإصدار 2.0+ غيّر الترخيص وواجهة connect().
+  flutter_blue_plus: ">=1.32.0 <2.0.0"
   permission_handler: ^11.3.1
   shared_preferences: ^2.2.3
   fl_chart: ^0.68.0
