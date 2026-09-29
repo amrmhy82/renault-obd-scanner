@@ -1,12 +1,26 @@
 import 'package:flutter/material.dart';
-import 'screens/scan_screen.dart';
+import 'core/obd_connection_controller.dart';
+import 'screens/home_screen.dart';
 
 void main() {
   runApp(const RenaultObdApp());
 }
 
-class RenaultObdApp extends StatelessWidget {
+class RenaultObdApp extends StatefulWidget {
   const RenaultObdApp({super.key});
+
+  @override
+  State<RenaultObdApp> createState() => _RenaultObdAppState();
+}
+
+class _RenaultObdAppState extends State<RenaultObdApp> {
+  final ObdConnectionController _controller = ObdConnectionController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +33,7 @@ class RenaultObdApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.light,
       ),
-      home: const ScanScreen(),
+      home: HomeScreen(controller: _controller),
     );
   }
 }

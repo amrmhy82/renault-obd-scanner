@@ -7,6 +7,7 @@ import '../core/ble_transport.dart';
 import '../core/bluetooth_classic_discovery.dart';
 import '../core/bluetooth_classic_transport.dart';
 import '../core/bluetooth_permissions.dart';
+import '../core/elm327_session.dart';
 import '../core/obd_connection_controller.dart';
 import '../core/transport.dart';
 
