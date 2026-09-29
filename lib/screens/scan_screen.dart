@@ -7,13 +7,8 @@ import '../core/ble_transport.dart';
 import '../core/bluetooth_classic_discovery.dart';
 import '../core/bluetooth_classic_transport.dart';
 import '../core/bluetooth_permissions.dart';
-import '../core/elm327_session.dart';
+import '../core/obd_connection_controller.dart';
 import '../core/transport.dart';
-import '../diagnostics/dtc_history_repository.dart';
-import '../services/trip_log_service.dart';
-import '../telemetry/live_telemetry_service.dart';
-import '../trip/trip_summary_repository.dart';
-import 'dashboard_screen.dart';
 
 /// نوع محول ELM327:
 ///  - ble: بلوتوث 4.0 منخفض الطاقة. لا يحتاج إقرانًا، ولا يظهر عادة في
@@ -21,8 +16,14 @@ import 'dashboard_screen.dart';
 ///  - classic: بلوتوث كلاسيك SPP. يحتاج إقرانًا على مستوى النظام.
 enum AdapterMode { ble, classic }
 
+/// شاشة اختيار/إقران المحول فقط — لا تُفتح إلا بطلب صريح من الشاشة
+/// الرئيسية (زر "اتصال")، وليست بوابة إجبارية لدخول التطبيق. عند نجاح
+/// الاتصال تُغلق نفسها (pop) وترجع للرئيسية، والاتصال يستمر من هناك عبر
+/// ObdConnectionController بغضّ النظر عمّا يُفتح بعدها.
 class ScanScreen extends StatefulWidget {
-  const ScanScreen({super.key});
+  final ObdConnectionController controller;
+  const ScanScreen({super.key, required this.controller});
+
 
   @override
   State<ScanScreen> createState() => _ScanScreenState();
@@ -33,9 +34,6 @@ class _ScanScreenState extends State<ScanScreen> {
 
   final BluetoothClassicDiscovery _classic = BluetoothClassicDiscovery();
   final BleDiscovery _ble = BleDiscovery();
-  final TripLogService _tripLogService = TripLogService();
-  final DtcHistoryRepository _dtcHistoryRepository = DtcHistoryRepository();
-  final TripSummaryRepository _tripSummaryRepository = TripSummaryRepository();
 
   AdapterMode _mode = AdapterMode.ble;
 
