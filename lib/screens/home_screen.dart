@@ -146,7 +146,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: 'البيانات الحية',
                 subtitle: 'دورات المحرك، السرعة، الحرارة، حساسات الاحتراق...',
                 enabled: connected,
-                onTap: () => _openIfConnected(() => DashboardScreen(controller: c)),
+                onTap: () => _openIfConnected(
+                  () => DashboardScreen(
+                    session: c.session!,
+                    telemetryService: c.telemetryService!,
+                    tripLogService: c.tripLogService,
+                    dtcHistoryRepository: c.dtcHistoryRepository,
+                    tripSummaryRepository: c.tripSummaryRepository,
+                  ),
+                ),
               ),
               _menuTile(
                 icon: Icons.warning_amber_rounded,
