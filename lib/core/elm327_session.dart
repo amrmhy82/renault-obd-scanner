@@ -251,6 +251,10 @@ class Elm327Session {
     return RegExp(r'^[A-HJ-NPR-Z0-9]{17}$').hasMatch(vin) ? vin : null;
   }
 
+  /// Generic Mode 06 capture. Decoding MID/TID is ECU-specific and remains
+  /// unconfirmed until a verified definition is available.
+  Future<String> readMode06Raw() => _send('06');
+
   String? _decodeDtc(int a, int b) {
     if (a == 0 && b == 0) return null;
     const prefixes = ['P', 'C', 'B', 'U'];
