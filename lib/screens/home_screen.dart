@@ -8,6 +8,7 @@ import '../trip/trip_computer_screen.dart';
 import '../vehicle/vehicle_profile_repository.dart';
 import '../vehicle/vehicle_profile_screen.dart';
 import 'dashboard_screen.dart';
+import 'certification_screen.dart';
 import 'data_logs_screen.dart';
 import 'dtc_screen.dart';
 import 'scan_screen.dart';
@@ -180,6 +181,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 subtitle: 'كل أمر أُرسل والرد الخام له',
                 enabled: connected,
                 onTap: () => _openIfConnected(() => DebugLogScreen(session: c.session!)),
+              ),
+              _menuTile(
+                icon: Icons.fact_check_outlined,
+                title: 'اعتماد Phase 0',
+                subtitle: 'تشغيل اختبارات الجاهزية وتصدير تقرير موثق',
+                enabled: connected,
+                onTap: () => _openIfConnected(() => CertificationScreen(session: c.session!)),
               ),
 
               const SizedBox(height: 12),

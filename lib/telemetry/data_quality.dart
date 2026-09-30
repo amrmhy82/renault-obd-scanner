@@ -1,6 +1,6 @@
 enum ValueSource { genericObd, renaultDefinition, estimated }
 
-enum ValueAuthority { ecuResponse, applicationInference }
+enum ValueAuthority { ecuResponse, applicationInference, uncertain }
 
 enum ValueConfidence { high, medium, low, unconfirmed }
 
@@ -21,6 +21,14 @@ extension ValueQualityLabels on ValueQuality {
         return 'غير متاحة';
     }
   }
+}
+
+extension ValueAuthorityLabels on ValueAuthority {
+  String get labelAr => switch (this) {
+        ValueAuthority.ecuResponse => 'رد ECU',
+        ValueAuthority.applicationInference => 'استنتاج التطبيق',
+        ValueAuthority.uncertain => 'غير مؤكدة',
+      };
 }
 
 class TelemetryField {

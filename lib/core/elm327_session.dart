@@ -7,15 +7,6 @@ import 'pid_registry.dart';
 import 'raw_capture.dart';
 import 'transport.dart';
 
-class DebugLogEntry {
-  final DateTime time;
-  final String command;
-  final String rawResponse;
-  final int latencyMs;
-  final bool isError;
-  DebugLogEntry(this.time, this.command, this.rawResponse, this.latencyMs, this.isError);
-}
-
 /// استُثنيت التهيئة عند فشل أحد أوامر AT (بدل الاستمرار بصمت وكأن كل شيء تمام)
 class Elm327InitializationException implements Exception {
   final String failedCommand;
@@ -34,10 +25,6 @@ class Elm327Session {
   final Transport transport;
   final RawCaptureStore rawCapture;
   late final CommandQueue _queue;
-
-  /// سجل تصحيح يحتفظ بآخر 300 أمر/رد خام مع زمن الاستجابة وحالة الخطأ —
-  /// يُعرض في شاشة Debug منفصلة لا يراها المستخدم العادي.
-  final List<DebugLogEntry> debugLog = [];
 
   ElmSessionState _state = ElmSessionState.disconnected;
   ElmSessionState get state => _state;
@@ -92,9 +79,6 @@ class Elm327Session {
       latencyMs: latencyMs,
       isError: isError,
     ));
-    debugLog.add(DebugLogEntry(DateTime.now(), command, result, latencyMs, isError));
-    if (debugLog.length > 300) debugLog.removeAt(0);
-
     // إعادة اتصال تلقائية: نفرّق بين خطأ بروتوكول عادي (NO DATA لأمر غير
     // مدعوم مثلًا، وهذا طبيعي ومتوقع) وبين انقطاع اتصال فعلي متكرر
     // (TIMEOUT/DISCONNECTED)، ولا نطلق إعادة اتصال إلا في الحالة الثانية.

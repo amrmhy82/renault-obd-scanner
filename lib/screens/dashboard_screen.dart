@@ -198,7 +198,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (field != null) ...[
               const SizedBox(height: 4),
               Text(
-                '${field.quality.labelAr}  •  ${field.rateHz == null ? '--' : '${field.rateHz!.toStringAsFixed(1)} Hz'}',
+                '${field.quality.labelAr}  •  ${field.authority.labelAr}  •  '
+                '${field.ageMs(DateTime.now()) == null ? '--' : '${field.ageMs(DateTime.now())} ms'}  •  '
+                '${field.rateHz == null ? '--' : '${field.rateHz!.toStringAsFixed(1)} Hz'}',
                 style: TextStyle(
                   fontSize: 10,
                   color: field.quality == ValueQuality.good ? Colors.green : Colors.orange,
