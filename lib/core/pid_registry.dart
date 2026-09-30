@@ -27,6 +27,8 @@ class PidDefinition {
     this.category = PidCategory.basics,
     required this.parse,
   });
+
+  int get pidNumber => int.parse(command.substring(2), radix: 16);
 }
 
 /// سجل موحّد لكل PIDs المدعومة. إضافة قياس جديد تكون بإضافة عنصر واحد هنا

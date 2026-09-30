@@ -21,6 +21,8 @@ class DtcScreen extends StatefulWidget {
 class _DtcScreenState extends State<DtcScreen> {
   final DtcDatabase _dtcDatabase = DtcDatabase();
   List<String> _activeCodes = [];
+  List<String> _pendingCodes = [];
+  List<String> _permanentCodes = [];
   bool _loading = false;
   String? _message;
 
@@ -41,10 +43,17 @@ class _DtcScreenState extends State<DtcScreen> {
       _message = null;
     });
     try {
-      final codes = await widget.session.readRawDtcs();
+      final results = await Future.wait([
+        widget.session.readRawDtcs(),
+        widget.session.readPendingDtcs(),
+        widget.session.readPermanentDtcs(),
+      ]);
+      final codes = results[0];
       await widget.historyRepository.recordScan(codes);
       setState(() {
         _activeCodes = codes;
+        _pendingCodes = results[1];
+        _permanentCodes = results[2];
         _message = codes.isEmpty ? 'لا توجد أعطال نشطة حاليًا.' : null;
       });
     } catch (e) {
@@ -55,7 +64,7 @@ class _DtcScreenState extends State<DtcScreen> {
   }
 
   Future<void> _clear() async {
-    final confirm = await showDialog<bool>(
+    final firstConfirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('تأكيد المسح'),
@@ -70,11 +79,32 @@ class _DtcScreenState extends State<DtcScreen> {
         ],
       ),
     );
-    if (confirm != true) return;
+    if (firstConfirm != true || !mounted) return;
+
+    final secondConfirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('تأكيد نهائي للمسح'),
+        content: const Text(
+          'هذا إجراء تعديلي سيرسل Mode 04 إلى وحدة السيارة وقد يمسح بيانات تشخيصية مفيدة. '
+          'هل تريد التنفيذ الآن؟',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('تنفيذ المسح')),
+        ],
+      ),
+    );
+    if (secondConfirm != true || !mounted) return;
 
     setState(() => _loading = true);
     final ok = await widget.session.clearDtcs();
     if (ok) await widget.historyRepository.recordClear();
+    await widget.historyRepository.recordAudit(
+      action: 'clear_dtcs',
+      result: ok ? 'success' : 'failed',
+      details: 'Mode 04; verification scan follows',
+    );
     setState(() {
       _loading = false;
       _message = ok ? 'تم مسح الأعطال بنجاح.' : 'فشل مسح الأعطال.';
@@ -180,6 +210,10 @@ class _DtcScreenState extends State<DtcScreen> {
                     ),
                   );
                 }),
+                const SizedBox(height: 16),
+                _secondaryCodesSection('الأعطال المعلّقة (Mode 07)', _pendingCodes),
+                const SizedBox(height: 12),
+                _secondaryCodesSection('الأعطال الدائمة (Mode 0A)', _permanentCodes),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
                   onPressed: _activeCodes.isEmpty || _loading ? null : _clear,
@@ -202,6 +236,25 @@ class _DtcScreenState extends State<DtcScreen> {
                 ...history.map(_historyTile),
               ],
             ),
+    );
+  }
+
+  Widget _secondaryCodesSection(String title, List<String> codes) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$title (${codes.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Text(
+              codes.isEmpty ? 'لا توجد أكواد.' : codes.join('، '),
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

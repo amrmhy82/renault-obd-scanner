@@ -1,6 +1,7 @@
 import 'dart:async';
 import '../core/elm327_session.dart';
 import '../core/pid_registry.dart';
+import 'data_quality.dart';
 import 'vehicle_state.dart';
 
 /// مُجدوِل حقيقي بمواعيد استحقاق (deadlines) مستقلة لكل PID، بدل عدّاد
@@ -24,6 +25,8 @@ class LiveTelemetryService {
 
   final Map<String, DateTime> _nextDueAt = {};
   final Map<String, num> _values = {};
+  final Map<String, DateTime> _lastUpdated = {};
+  final Map<String, double> _ratesHz = {};
   bool _running = false;
   bool _stopRequested = false;
 
@@ -54,6 +57,10 @@ class LiveTelemetryService {
       final now = DateTime.now();
       PidDefinition? duePid;
       for (final pid in PidRegistry.all) {
+        if (session.isPidSupported(pid.pidNumber) == false) {
+          _nextDueAt[pid.key] = now.add(_intervals[pid.pollClass]!);
+          continue;
+        }
         final due = _nextDueAt[pid.key] ?? now;
         if (!due.isAfter(now)) {
           duePid = pid;
@@ -73,7 +80,16 @@ class LiveTelemetryService {
 
       try {
         final value = await session.readPid(duePid);
-        if (value != null) _values[duePid.key] = value;
+        if (value != null) {
+          final receivedAt = DateTime.now();
+          final previous = _lastUpdated[duePid.key];
+          if (previous != null) {
+            final elapsedMs = receivedAt.difference(previous).inMilliseconds;
+            if (elapsedMs > 0) _ratesHz[duePid.key] = 1000 / elapsedMs;
+          }
+          _values[duePid.key] = value;
+          _lastUpdated[duePid.key] = receivedAt;
+        }
       } catch (_) {
         // تجاهل خطأ قراءة PID واحد ومتابعة الباقي بدل إيقاف الحلقة كلها
       }
@@ -87,11 +103,44 @@ class LiveTelemetryService {
 
   void _publish() {
     if (_controller.isClosed) return;
+    final now = DateTime.now();
+    final fields = <String, TelemetryField>{};
+    for (final pid in PidRegistry.all) {
+      final updated = _lastUpdated[pid.key];
+      final value = _values[pid.key];
+      final age = updated == null ? null : now.difference(updated);
+      final staleAfter = _stalenessThreshold(pid.pollClass);
+      fields[pid.key] = TelemetryField(
+        value: value,
+        source: ValueSource.genericObd,
+        authority: ValueAuthority.ecuResponse,
+        confidence: value == null ? ValueConfidence.unconfirmed : ValueConfidence.high,
+        quality: value == null
+            ? ValueQuality.missing
+            : age != null && age > staleAfter
+                ? ValueQuality.stale
+                : ValueQuality.good,
+        timestamp: updated,
+        rateHz: _ratesHz[pid.key],
+      );
+    }
     _controller.add(VehicleState(
       values: Map.of(_values),
+      fields: fields,
       connected: session.isConnected,
-      lastUpdate: DateTime.now(),
+      lastUpdate: now,
     ));
+  }
+
+  Duration _stalenessThreshold(PollClass pollClass) {
+    switch (pollClass) {
+      case PollClass.fast:
+        return const Duration(seconds: 2);
+      case PollClass.medium:
+        return const Duration(seconds: 6);
+      case PollClass.slow:
+        return const Duration(seconds: 25);
+    }
   }
 
   void dispose() {

@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../core/elm327_session.dart';
 
 /// سجل تصحيح تقني (Observability) يعرض كل أمر أُرسل والرد الخام وزمن
@@ -31,6 +34,16 @@ class _DebugLogScreenState extends State<DebugLogScreen> {
     super.dispose();
   }
 
+  Future<void> _exportCapture() async {
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/obd_raw_capture.json');
+    await file.writeAsString(widget.session.rawCapture.toJson(), flush: true);
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      text: 'Raw OBD diagnostic capture',
+    );
+  }
+
   String _fmtTime(DateTime t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}:'
       '${t.second.toString().padLeft(2, '0')}.${t.millisecond.toString().padLeft(3, '0')}';
@@ -40,11 +53,23 @@ class _DebugLogScreenState extends State<DebugLogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final entries = widget.session.debugLog.reversed.toList();
+    final entries = widget.session.rawCapture.entries.reversed.toList();
     return Scaffold(
       appBar: AppBar(
         title: const Text('سجل تصحيح الأخطاء (Debug)'),
         actions: [
+          IconButton(
+            tooltip: 'تصدير Raw Capture',
+            icon: const Icon(Icons.ios_share),
+            onPressed: entries.isEmpty ? null : _exportCapture,
+          ),
+          IconButton(
+            tooltip: 'مسح السجل',
+            icon: const Icon(Icons.delete_outline),
+            onPressed: entries.isEmpty
+                ? null
+                : () => setState(() => widget.session.rawCapture.clear()),
+          ),
           Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -70,7 +95,7 @@ class _DebugLogScreenState extends State<DebugLogScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(_fmtTime(e.time), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                            Text(_fmtTime(e.timestamp), style: const TextStyle(fontSize: 11, color: Colors.grey)),
                             Text('${e.latencyMs} ms', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                           ],
                         ),

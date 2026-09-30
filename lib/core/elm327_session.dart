@@ -4,6 +4,7 @@ import 'elm_session_state.dart';
 import 'init_command.dart';
 import 'obd_response_utils.dart';
 import 'pid_registry.dart';
+import 'raw_capture.dart';
 import 'transport.dart';
 
 class DebugLogEntry {
@@ -31,6 +32,7 @@ class Elm327InitializationException implements Exception {
 /// ولا ترسل أوامر AT أو PID خام مباشرة.
 class Elm327Session {
   final Transport transport;
+  final RawCaptureStore rawCapture;
   late final CommandQueue _queue;
 
   /// سجل تصحيح يحتفظ بآخر 300 أمر/رد خام مع زمن الاستجابة وحالة الخطأ —
@@ -39,6 +41,8 @@ class Elm327Session {
 
   ElmSessionState _state = ElmSessionState.disconnected;
   ElmSessionState get state => _state;
+  Set<int>? _supportedPids;
+  Set<int>? get supportedPids => _supportedPids == null ? null : Set.unmodifiable(_supportedPids!);
   final StreamController<ElmSessionState> _stateController =
       StreamController<ElmSessionState>.broadcast();
   Stream<ElmSessionState> get stateStream => _stateController.stream;
@@ -50,11 +54,20 @@ class Elm327Session {
   bool _reconnecting = false;
   bool _disposed = false;
 
-  Elm327Session(this.transport) {
+  Elm327Session(this.transport, {RawCaptureStore? rawCapture})
+      : rawCapture = rawCapture ?? RawCaptureStore() {
     _queue = CommandQueue(transport);
   }
 
   bool get isConnected => transport.isConnected;
+
+  /// Returns whether a PID is advertised by the ECU, or null when the
+  /// capability bitmap has not been obtained / does not cover that PID.
+  bool? isPidSupported(int pid) {
+    final supported = _supportedPids;
+    if (supported == null || pid > 0x20) return null;
+    return supported.contains(pid);
+  }
 
   void _setState(ElmSessionState s) {
     _state = s;
@@ -71,6 +84,14 @@ class Elm327Session {
         await _queue.send(ObdCommand(command, timeout: timeout, maxRetries: retries));
     final latencyMs = DateTime.now().difference(start).inMilliseconds;
     final isError = ObdResponseUtils.hasError(result);
+    rawCapture.record(RawCaptureEntry(
+      timestamp: DateTime.now(),
+      transport: transport.runtimeType.toString(),
+      command: command,
+      rawResponse: result,
+      latencyMs: latencyMs,
+      isError: isError,
+    ));
     debugLog.add(DebugLogEntry(DateTime.now(), command, result, latencyMs, isError));
     if (debugLog.length > 300) debugLog.removeAt(0);
 
@@ -170,7 +191,29 @@ class Elm327Session {
     // التحقق الحقيقي من نجاح اختيار البروتوكول يحدث عمليًا مع أول قراءة PID.
     await _send('ATSP0');
 
+    // Capability evidence for the first standard PID window. This is
+    // intentionally advisory: unsupported/unknown windows remain readable
+    // as UNCONFIRMED rather than being presented as guaranteed.
+    _supportedPids = await _readSupportedPidWindow('0100', 0x00);
+
     _setState(ElmSessionState.ready);
+  }
+
+  Future<Set<int>?> _readSupportedPidWindow(String command, int basePid) async {
+    final raw = await _send(command);
+    if (ObdResponseUtils.hasError(raw)) return null;
+    final bytes = ObdResponseUtils.extractBytes(raw);
+    if (bytes.length < 6 || bytes[0] != 0x41 || bytes[1] != basePid) return null;
+    final supported = <int>{};
+    for (var byteIndex = 0; byteIndex < 4; byteIndex++) {
+      final bitmap = bytes[byteIndex + 2];
+      for (var bit = 0; bit < 8; bit++) {
+        if ((bitmap & (1 << (7 - bit))) != 0) {
+          supported.add(basePid + (byteIndex * 8) + bit + 1);
+        }
+      }
+    }
+    return supported;
   }
 
   Future<num?> readPid(PidDefinition pid) async {
@@ -185,12 +228,20 @@ class Elm327Session {
   }
 
   /// قراءة أكواد الأعطال النشطة حاليًا (Mode 03)
-  Future<List<String>> readRawDtcs() async {
-    final raw = await _send('03');
+  Future<List<String>> readRawDtcs() => _readDtcs('03', 0x43);
+
+  /// قراءة أكواد الأعطال المعلّقة (Mode 07).
+  Future<List<String>> readPendingDtcs() => _readDtcs('07', 0x47);
+
+  /// قراءة أكواد الأعطال الدائمة (Mode 0A).
+  Future<List<String>> readPermanentDtcs() => _readDtcs('0A', 0x4A);
+
+  Future<List<String>> _readDtcs(String command, int responseMode) async {
+    final raw = await _send(command);
     if (ObdResponseUtils.hasError(raw)) return [];
     final bytes = ObdResponseUtils.extractBytes(raw);
     final codes = <String>[];
-    if (bytes.isNotEmpty && bytes[0] == 0x43) {
+    if (bytes.isNotEmpty && bytes[0] == responseMode) {
       final data = bytes.sublist(1);
       for (int i = 0; i + 1 < data.length; i += 2) {
         final code = _decodeDtc(data[i], data[i + 1]);
@@ -198,6 +249,22 @@ class Elm327Session {
       }
     }
     return codes;
+  }
+
+  /// قراءة VIN القياسي عبر Mode 09 PID 02 إن كان المحول/ECU يدعمه.
+  /// تُرجع null عند عدم الدعم أو عند عدم اكتمال رد ASCII بطول VIN قياسي.
+  Future<String?> readVin() async {
+    final raw = await _send('0902');
+    if (ObdResponseUtils.hasError(raw)) return null;
+    final bytes = ObdResponseUtils.extractBytes(raw);
+    if (bytes.length < 3 || bytes[0] != 0x49 || bytes[1] != 0x02) return null;
+
+    var data = bytes.sublist(2);
+    if (data.isNotEmpty && data.first <= 0x02) data = data.sublist(1);
+    final vin = String.fromCharCodes(
+      data.where((b) => b >= 0x20 && b <= 0x7E),
+    ).replaceAll(RegExp(r'\s+'), '');
+    return RegExp(r'^[A-HJ-NPR-Z0-9]{17}$').hasMatch(vin) ? vin : null;
   }
 
   String? _decodeDtc(int a, int b) {

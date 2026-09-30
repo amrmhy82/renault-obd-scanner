@@ -10,6 +10,7 @@ import '../maintenance/maintenance_screen.dart';
 import '../models/trip_point.dart';
 import '../services/trip_log_service.dart';
 import '../telemetry/live_telemetry_service.dart';
+import '../telemetry/data_quality.dart';
 import '../telemetry/vehicle_state.dart';
 import '../trip/trip_computer.dart';
 import '../trip/trip_computer_screen.dart';
@@ -182,7 +183,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return v.toStringAsFixed(2);
   }
 
-  Widget _card(String label, String value, IconData icon) {
+  Widget _card(String label, String value, IconData icon, TelemetryField? field) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -194,6 +195,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
             const SizedBox(height: 4),
             Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            if (field != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                '${field.quality.labelAr}  •  ${field.rateHz == null ? '--' : '${field.rateHz!.toStringAsFixed(1)} Hz'}',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: field.quality == ValueQuality.good ? Colors.green : Colors.orange,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -272,7 +283,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       physics: const NeverScrollableScrollPhysics(),
       children: pids.map((pid) {
         final value = _state[pid.key];
-        return _card(pid.nameAr, '${_formatValue(value)} ${pid.unit}', _iconFor(pid.key));
+        return _card(
+          pid.nameAr,
+          '${_formatValue(value)} ${pid.unit}',
+          _iconFor(pid.key),
+          _state.field(pid.key),
+        );
       }).toList(),
     );
   }
