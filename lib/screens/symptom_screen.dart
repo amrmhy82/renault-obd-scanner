@@ -7,6 +7,7 @@ import '../core/elm327_session.dart';
 import '../symptoms/symptom_diagnostic_service.dart';
 import '../symptoms/symptom_models.dart';
 import '../symptoms/symptom_registry.dart';
+import '../telemetry/data_quality.dart';
 
 class SymptomScreen extends StatefulWidget {
   final Elm327Session session;
@@ -103,11 +104,28 @@ class _SymptomScreenState extends State<SymptomScreen> {
           OutlinedButton.icon(onPressed: () => setState(() => _report = null), icon: const Icon(Icons.refresh), label: const Text('فحص عرض آخر')),
           const SizedBox(height: 8),
           const Text('الأدلة', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-          ...report.evidence.map((e) => Card(child: ListTile(title: Text(e.title), subtitle: Text('${e.value}\n${e.supportingData}\nالجودة: ${e.quality.name} • العمر: ${e.ageMs ?? "غير متاح"} ms • المعدل: ${e.rateHz?.toStringAsFixed(1) ?? "غير متاح"} Hz • الحالة: ${e.state.name}'), isThreeLine: true, trailing: Text(e.confidence.name, style: TextStyle(color: _confidence(e.confidence))))),
+          ...report.evidence.map(_evidenceCard),
           const Text('الاستنتاجات', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           ...report.conclusions.map((e) => ListTile(leading: const Icon(Icons.lightbulb_outline), title: Text(e))),
           const Text('حدود النتيجة', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           ...report.uncertainties.map((e) => ListTile(leading: const Icon(Icons.info_outline), title: Text(e))),
         ],
       );
+
+  Widget _evidenceCard(SymptomEvidence e) {
+    final details = [
+      e.value,
+      e.supportingData,
+      'الجودة: ${e.quality.name} • العمر: ${e.ageMs ?? "غير متاح"} ms',
+      'المعدل: ${e.rateHz?.toStringAsFixed(1) ?? "غير متاح"} Hz • الحالة: ${e.state.name}',
+    ].join('\n');
+    return Card(
+      child: ListTile(
+        title: Text(e.title),
+        subtitle: Text(details),
+        isThreeLine: true,
+        trailing: Text(e.confidence.name, style: TextStyle(color: _confidence(e.confidence))),
+      ),
+    );
+  }
 }
