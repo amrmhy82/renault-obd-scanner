@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../diagnostics/dtc_history_repository.dart';
+import '../data/data_logger_service.dart';
 import '../models/trip_point.dart';
 import '../services/trip_log_service.dart';
 import '../telemetry/live_telemetry_service.dart';
@@ -18,6 +19,7 @@ class ObdConnectionController extends ChangeNotifier {
   final TripLogService tripLogService = TripLogService();
   final DtcHistoryRepository dtcHistoryRepository = DtcHistoryRepository();
   final TripSummaryRepository tripSummaryRepository = TripSummaryRepository();
+  final DataLoggerService dataLoggerService = DataLoggerService();
   final FuelCalibrationRepository _fuelCalibrationRepository =
       FuelCalibrationRepository();
 
@@ -72,11 +74,13 @@ class ObdConnectionController extends ChangeNotifier {
     _telemetry = telemetry;
     _telemetrySub = telemetry.stream.listen(_onVehicleState);
     _stateSub = session.stateStream.listen((_) => notifyListeners());
+    await dataLoggerService.start();
     telemetry.start();
     notifyListeners();
   }
 
   void _onVehicleState(VehicleState state) {
+    dataLoggerService.record(state);
     final point = TripPoint(
       timestamp: state.lastUpdate,
       rpm: state['rpm']?.round(),
@@ -112,6 +116,8 @@ class ObdConnectionController extends ChangeNotifier {
       }
       session.dispose();
     }
+
+    await dataLoggerService.stop();
 
     await tripLogService.flush();
     await _saveTripSummaryIfNeeded();

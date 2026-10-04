@@ -155,6 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     tripLogService: c.tripLogService,
                     dtcHistoryRepository: c.dtcHistoryRepository,
                     tripSummaryRepository: c.tripSummaryRepository,
+                    getCurrentTripPoints: () => c.currentTripPoints,
                   ),
                 ),
               ),

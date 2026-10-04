@@ -80,7 +80,7 @@ class DataLoggerService {
     }
   }
 
-  /// يُستدعى من DashboardScreen بعد كل تحديث VehicleState. يحدّث القيم
+  /// يُستدعى من ObdConnectionController بعد كل تحديث VehicleState. يحدّث القيم
   /// الأخيرة وزمن وصولها فقط؛ الكتابة الفعلية تحدث في المؤقت (1 Hz).
   void record(VehicleState state) {
     if (!_active) return;

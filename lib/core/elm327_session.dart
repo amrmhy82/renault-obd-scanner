@@ -29,6 +29,7 @@ class Elm327Session {
   ElmSessionState _state = ElmSessionState.disconnected;
   ElmSessionState get state => _state;
   Set<int>? _supportedPids;
+  final Set<int> _unsupportedPids = {};
   Set<int>? get supportedPids => _supportedPids == null ? null : Set.unmodifiable(_supportedPids!);
   final StreamController<ElmSessionState> _stateController =
       StreamController<ElmSessionState>.broadcast();
@@ -51,8 +52,10 @@ class Elm327Session {
   /// Returns whether a PID is advertised by the ECU, or null when the
   /// capability bitmap has not been obtained / does not cover that PID.
   bool? isPidSupported(int pid) {
+    if (_unsupportedPids.contains(pid)) return false;
     final supported = _supportedPids;
-    if (supported == null || pid > 0x20) return null;
+    if (supported == null) return null;
+    if (pid > 0x20 && !supported.contains(pid)) return null;
     return supported.contains(pid);
   }
 
@@ -178,7 +181,17 @@ class Elm327Session {
     // Capability evidence for the first standard PID window. This is
     // intentionally advisory: unsupported/unknown windows remain readable
     // as UNCONFIRMED rather than being presented as guaranteed.
+    _unsupportedPids.clear();
     _supportedPids = await _readSupportedPidWindow('0100', 0x00);
+    final firstWindow = _supportedPids;
+    if (firstWindow?.contains(0x20) == true) {
+      final second = await _readSupportedPidWindow('0120', 0x20);
+      if (second != null) _supportedPids = {...?firstWindow, ...second};
+      if (_supportedPids?.contains(0x40) == true) {
+        final third = await _readSupportedPidWindow('0140', 0x40);
+        if (third != null) _supportedPids = {...?_supportedPids, ...third};
+      }
+    }
 
     _setState(ElmSessionState.ready);
   }
@@ -202,7 +215,12 @@ class Elm327Session {
 
   Future<num?> readPid(PidDefinition pid) async {
     final raw = await _send(pid.command);
-    if (ObdResponseUtils.hasError(raw)) return null;
+    if (ObdResponseUtils.hasError(raw)) {
+      if (raw.toUpperCase().contains('NO DATA')) {
+        _unsupportedPids.add(pid.pidNumber);
+      }
+      return null;
+    }
     final bytes = ObdResponseUtils.extractBytes(raw);
     final expectedPidByte = int.parse(pid.command.substring(2, 4), radix: 16);
     if (bytes.length < 2 || bytes[0] != 0x41 || bytes[1] != expectedPidByte) {
@@ -240,7 +258,15 @@ class Elm327Session {
   Future<String?> readVin() async {
     final raw = await _send('0902');
     if (ObdResponseUtils.hasError(raw)) return null;
-    final bytes = ObdResponseUtils.extractBytes(raw);
+    // Some ECUs return VIN through ISO-TP segments labelled 0:, 1:, 2:.
+    // The optional leading 014 CAN header must not become VIN data.
+    final segments = RegExp(r'(?:^|[\r\n])\s*[0-9A-Fa-f]{1,2}:([0-9A-Fa-f]+)')
+        .allMatches(raw)
+        .map((match) => match.group(1)!)
+        .toList();
+    final bytes = segments.isNotEmpty
+        ? segments.expand((segment) => _hexBytes(segment)).toList()
+        : ObdResponseUtils.extractBytes(raw);
     if (bytes.length < 3 || bytes[0] != 0x49 || bytes[1] != 0x02) return null;
 
     var data = bytes.sublist(2);
@@ -249,6 +275,14 @@ class Elm327Session {
       data.where((b) => b >= 0x20 && b <= 0x7E),
     ).replaceAll(RegExp(r'\s+'), '');
     return RegExp(r'^[A-HJ-NPR-Z0-9]{17}$').hasMatch(vin) ? vin : null;
+  }
+
+  List<int> _hexBytes(String hex) {
+    final bytes = <int>[];
+    for (var i = 0; i + 1 < hex.length; i += 2) {
+      bytes.add(int.parse(hex.substring(i, i + 2), radix: 16));
+    }
+    return bytes;
   }
 
   /// Generic Mode 06 capture. Decoding MID/TID is ECU-specific and remains
