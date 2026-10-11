@@ -13,6 +13,7 @@ import 'data_logs_screen.dart';
 import 'dtc_screen.dart';
 import 'scan_screen.dart';
 import 'symptom_screen.dart';
+import 'quick_scan_screen.dart';
 import 'trip_log_screen.dart';
 
 /// الشاشة الرئيسية الفعلية للتطبيق — تُفتح دائمًا بلا شرط اتصال. الاتصال
@@ -167,6 +168,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () => _openIfConnected(
                   () => DtcScreen(session: c.session!, historyRepository: c.dtcHistoryRepository),
                 ),
+              ),
+              _menuTile(
+                icon: Icons.assignment_turned_in_outlined,
+                title: 'الفحص السريع',
+                subtitle: 'تقرير الأعطال والجاهزية والقياسات الأساسية',
+                enabled: connected,
+                onTap: () => _openIfConnected(() => QuickScanScreen(session: c.session!)),
               ),
               _menuTile(
                 icon: Icons.manage_search,

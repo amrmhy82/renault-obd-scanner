@@ -289,6 +289,18 @@ class Elm327Session {
   /// unconfirmed until a verified definition is available.
   Future<String> readMode06Raw() => _send('06');
 
+  Future<List<int>?> readReadiness() async {
+    final raw = await _send('0101');
+    if (ObdResponseUtils.hasError(raw)) return null;
+    final bytes = ObdResponseUtils.extractBytes(raw);
+    return bytes.length >= 6 && bytes[0] == 0x41 && bytes[1] == 0x01 ? bytes.sublist(2, 6) : null;
+  }
+
+  Future<String?> readFreezeFrameRaw() async {
+    final raw = await _send('0200');
+    return ObdResponseUtils.hasError(raw) ? null : raw;
+  }
+
   String? _decodeDtc(int a, int b) {
     if (a == 0 && b == 0) return null;
     const prefixes = ['P', 'C', 'B', 'U'];
