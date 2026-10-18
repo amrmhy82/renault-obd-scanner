@@ -104,6 +104,12 @@ class LiveTelemetryService {
   void _publish() {
     if (_controller.isClosed) return;
     final now = DateTime.now();
+    final connected = session.isConnected;
+    if (!connected) {
+      _values.clear();
+      _lastUpdated.clear();
+      _ratesHz.clear();
+    }
     final fields = <String, TelemetryField>{};
     for (final pid in PidRegistry.all) {
       final updated = _lastUpdated[pid.key];
@@ -127,7 +133,7 @@ class LiveTelemetryService {
     _controller.add(VehicleState(
       values: Map.of(_values),
       fields: fields,
-      connected: session.isConnected,
+      connected: connected,
       lastUpdate: now,
     ));
   }

@@ -15,6 +15,7 @@ import 'scan_screen.dart';
 import 'symptom_screen.dart';
 import 'quick_scan_screen.dart';
 import 'trip_log_screen.dart';
+import 'settings_screen.dart';
 
 /// الشاشة الرئيسية الفعلية للتطبيق — تُفتح دائمًا بلا شرط اتصال. الاتصال
 /// بالمحول أصبح إجراءً اختياريًا يُطلب من هنا (بطاقة الحالة أعلى الشاشة)،
@@ -157,6 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     dtcHistoryRepository: c.dtcHistoryRepository,
                     tripSummaryRepository: c.tripSummaryRepository,
                     getCurrentTripPoints: () => c.currentTripPoints,
+                    onReconnect: c.reconnect,
                   ),
                 ),
               ),
@@ -258,6 +260,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       .push(MaterialPageRoute(builder: (_) => const VehicleProfileScreen()));
                   _loadTitle();
                 },
+              ),
+              _menuTile(
+                icon: Icons.settings_outlined,
+                title: 'إعدادات التطبيق',
+                subtitle: 'مجلد حفظ التقارير والحفظ التلقائي عند الانقطاع',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                ),
               ),
             ],
           );

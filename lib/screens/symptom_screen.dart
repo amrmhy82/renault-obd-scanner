@@ -8,6 +8,7 @@ import '../symptoms/symptom_diagnostic_service.dart';
 import '../symptoms/symptom_models.dart';
 import '../symptoms/symptom_registry.dart';
 import '../telemetry/data_quality.dart';
+import '../reports/report_archive_service.dart';
 
 class SymptomScreen extends StatefulWidget {
   final Elm327Session session;
@@ -27,6 +28,7 @@ class _SymptomScreenState extends State<SymptomScreen> {
       final report = await SymptomDiagnosticService(widget.session).run(symptom, onStep: (step) {
         if (mounted) setState(() => _step = step);
       });
+      await ReportArchiveService.instance.recordJson('symptom_${symptom.id}', report.toJson());
       if (mounted) setState(() => _report = report);
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إكمال الفحص: $error')));
@@ -107,6 +109,10 @@ class _SymptomScreenState extends State<SymptomScreen> {
           ...report.evidence.map(_evidenceCard),
           const Text('الاستنتاجات', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           ...report.conclusions.map((e) => ListTile(leading: const Icon(Icons.lightbulb_outline), title: Text(e))),
+          if (report.recommendations.isNotEmpty) ...[
+            const Text('الخطوة التالية', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            ...report.recommendations.map((e) => ListTile(leading: const Icon(Icons.build_outlined), title: Text(e))),
+          ],
           const Text('حدود النتيجة', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           ...report.uncertainties.map((e) => ListTile(leading: const Icon(Icons.info_outline), title: Text(e))),
         ],

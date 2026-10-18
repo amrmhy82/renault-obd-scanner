@@ -13,6 +13,7 @@ class SymptomDefinition {
   final List<String> relatedDtcs;
   final List<String> requiredPids;
   final List<String> recommendations;
+  final List<String> ruleIds;
   final int idleSeconds;
   final int loadSeconds;
 
@@ -25,6 +26,7 @@ class SymptomDefinition {
     this.relatedDtcs = const [],
     this.requiredPids = const [],
     this.recommendations = const [],
+    this.ruleIds = const [],
     this.idleSeconds = 10,
     this.loadSeconds = 0,
   });
@@ -78,6 +80,7 @@ class SymptomReport {
   final List<SymptomEvidence> evidence;
   final List<String> conclusions;
   final List<String> uncertainties;
+  final List<String> recommendations;
   final List<Map<String, Object?>> coverage;
 
   const SymptomReport({
@@ -86,6 +89,7 @@ class SymptomReport {
     required this.evidence,
     required this.conclusions,
     required this.uncertainties,
+    this.recommendations = const [],
     this.coverage = const [],
   });
 
@@ -96,6 +100,7 @@ class SymptomReport {
         'evidence': evidence.map((e) => e.toJson()).toList(),
         'conclusions': conclusions,
         'uncertainties': uncertainties,
+        'recommendations': recommendations,
         'coverage': coverage,
       };
 }

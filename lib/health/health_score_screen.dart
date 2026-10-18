@@ -59,7 +59,8 @@ class _HealthScoreScreenState extends State<HealthScoreScreen> {
     super.dispose();
   }
 
-  Color _scoreColor(int score) {
+  Color _scoreColor(int score, {bool enabled = true}) {
+    if (!enabled) return Colors.grey;
     if (score >= 85) return Colors.green;
     if (score >= 60) return Colors.orange;
     return Colors.red;
@@ -111,15 +112,15 @@ class _HealthScoreScreenState extends State<HealthScoreScreen> {
                   height: 140,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: _scoreColor(report.score), width: 8),
+                    border: Border.all(color: _scoreColor(report.score, enabled: report.canAssess), width: 8),
                   ),
                   alignment: Alignment.center,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '${report.score}',
-                        style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: _scoreColor(report.score)),
+                        report.canAssess ? '${report.score}' : '--',
+                        style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: _scoreColor(report.score, enabled: report.canAssess)),
                       ),
                       const Text('من 100', style: TextStyle(color: Colors.grey, fontSize: 11)),
                     ],
@@ -127,7 +128,7 @@ class _HealthScoreScreenState extends State<HealthScoreScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'مستوى الثقة: ${report.confidencePercent}%',
+                  report.canAssess ? 'مستوى الثقة: ${report.confidencePercent}%' : 'بيانات غير كافية للتقييم',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(
@@ -137,7 +138,7 @@ class _HealthScoreScreenState extends State<HealthScoreScreen> {
               ],
             ),
           ),
-          if (report.confidencePercent < 40)
+          if (!report.canAssess || report.confidencePercent < 40)
             Container(
               margin: const EdgeInsets.only(top: 16),
               padding: const EdgeInsets.all(12),

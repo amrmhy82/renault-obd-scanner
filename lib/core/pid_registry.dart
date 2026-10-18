@@ -45,7 +45,7 @@ class PidRegistry {
       unit: 'RPM',
       command: '010C',
       pollClass: PollClass.fast,
-      parse: (b) => b.length >= 4 ? ((b[2] * 256) + b[3]) ~/ 4 : null,
+      parse: (b) => b.length >= 4 ? ((b[2] * 256) + b[3]) / 4 : null,
     ),
     PidDefinition(
       key: 'speed',

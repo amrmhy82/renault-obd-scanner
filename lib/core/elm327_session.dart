@@ -30,6 +30,8 @@ class Elm327Session {
   ElmSessionState get state => _state;
   Set<int>? _supportedPids;
   final Set<int> _unsupportedPids = {};
+  final Map<int, int> _pidNoDataFailures = {};
+  static const int _noDataFailuresBeforeHiding = 3;
   Set<int>? get supportedPids => _supportedPids == null ? null : Set.unmodifiable(_supportedPids!);
   final StreamController<ElmSessionState> _stateController =
       StreamController<ElmSessionState>.broadcast();
@@ -177,11 +179,19 @@ class Elm327Session {
     // ATSP0 (اختيار البروتوكول تلقائيًا) غالبًا لا يعطي ردًا واضحًا فوريًا؛
     // التحقق الحقيقي من نجاح اختيار البروتوكول يحدث عمليًا مع أول قراءة PID.
     await _send('ATSP0');
+    // Let the adapter tune inter-byte timing for this ECU. This improves
+    // reliability across cloned adapters without assuming a fixed protocol.
+    await _send('ATAT1');
+    // Keep protocol identity in Raw Capture for diagnostics and future
+    // vehicle-specific profiles; these commands are read-only.
+    await _send('ATDPN');
+    await _send('ATDP');
 
     // Capability evidence for the first standard PID window. This is
     // intentionally advisory: unsupported/unknown windows remain readable
     // as UNCONFIRMED rather than being presented as guaranteed.
     _unsupportedPids.clear();
+    _pidNoDataFailures.clear();
     _supportedPids = await _readSupportedPidWindow('0100', 0x00);
     final firstWindow = _supportedPids;
     if (firstWindow?.contains(0x20) == true) {
@@ -217,7 +227,11 @@ class Elm327Session {
     final raw = await _send(pid.command);
     if (ObdResponseUtils.hasError(raw)) {
       if (raw.toUpperCase().contains('NO DATA')) {
-        _unsupportedPids.add(pid.pidNumber);
+        final failures = (_pidNoDataFailures[pid.pidNumber] ?? 0) + 1;
+        _pidNoDataFailures[pid.pidNumber] = failures;
+        if (failures >= _noDataFailuresBeforeHiding) {
+          _unsupportedPids.add(pid.pidNumber);
+        }
       }
       return null;
     }
@@ -226,6 +240,8 @@ class Elm327Session {
     if (bytes.length < 2 || bytes[0] != 0x41 || bytes[1] != expectedPidByte) {
       return null;
     }
+    _pidNoDataFailures.remove(pid.pidNumber);
+    _unsupportedPids.remove(pid.pidNumber);
     return pid.parse(bytes);
   }
 

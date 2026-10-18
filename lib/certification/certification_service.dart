@@ -1,4 +1,5 @@
 import '../core/elm327_session.dart';
+import '../core/obd_response_utils.dart';
 import '../core/pid_registry.dart';
 
 enum CertificationStatus { pass, fail, skipped }
@@ -93,17 +94,22 @@ class CertificationService {
     await _pid(results, 'rpm', 'قراءة RPM عبر 010C', 'rpm');
     await _pid(results, 'speed', 'قراءة السرعة عبر 010D', 'speed');
     await _pid(results, 'coolant', 'قراءة حرارة سائل التبريد عبر 0105', 'coolant_temp');
-    await _dtc(results, 'active_dtcs', 'قراءة الأعطال النشطة Mode 03', session.readRawDtcs);
-    await _dtc(results, 'pending_dtcs', 'قراءة الأعطال المعلّقة Mode 07', session.readPendingDtcs);
-    await _dtc(results, 'permanent_dtcs', 'قراءة الأعطال الدائمة Mode 0A', session.readPermanentDtcs);
+    await _dtc(results, 'active_dtcs', 'قراءة الأعطال النشطة Mode 03', '03', 0x43, session.readRawDtcs);
+    await _dtc(results, 'pending_dtcs', 'قراءة الأعطال المعلّقة Mode 07', '07', 0x47, session.readPendingDtcs);
+    await _dtc(results, 'permanent_dtcs', 'قراءة الأعطال الدائمة Mode 0A', '0A', 0x4A, session.readPermanentDtcs);
     final vin = await session.readVin();
     add('vin', 'قراءة VIN عبر 0902', vin != null ? CertificationStatus.pass : CertificationStatus.skipped,
         vin ?? 'غير مدعوم أو لم يرد ECU');
-    add('parser', 'تحليل رد ATS0 بدون مسافات', session.rawCapture.entries.any((e) => e.rawResponse.contains('410C0000'))
-        ? CertificationStatus.pass : CertificationStatus.skipped, 'يُثبت عند وصول عينة 410C0000');
-    add('quality', 'بيانات الجودة والعمر والمعدل', CertificationStatus.pass, 'TelemetryField يتضمن Authority وQuality وAge وRate');
-    add('audit', 'سجل تدقيق العمليات', CertificationStatus.pass, 'سجل DTC audit متاح');
-    add('read_only', 'الوضع الافتراضي للقراءة فقط', CertificationStatus.pass, 'لا توجد أوامر تغيير دون تأكيد صريح');
+    final parser = _parserSelfTest();
+    add('parser', 'تحليل رد ATS0 بدون مسافات', parser ? CertificationStatus.pass : CertificationStatus.fail,
+        parser ? 'نجح اختبار الرد المتصل والمفصول: 410C0000 و 41 0C 00 00' : 'فشل اختبار تفكيك بايتات الرد');
+    add('quality', 'بيانات الجودة والعمر والمعدل', CertificationStatus.skipped,
+        'يتطلب الاختبار تشغيل LiveTelemetryService واستلام VehicleState فعلي');
+    add('audit', 'سجل تدقيق العمليات', CertificationStatus.skipped,
+        'يتطلب تشغيل DtcHistoryRepository وتسجيل عملية DTC فعلية');
+    final destructive = session.rawCapture.entries.any((e) => e.command.toUpperCase() == '04');
+    add('read_only', 'الوضع الافتراضي للقراءة فقط', destructive ? CertificationStatus.fail : CertificationStatus.pass,
+        destructive ? 'تم العثور على أمر مسح DTC في جلسة الاعتماد' : 'لم يُرسل أمر تغيير أو مسح أثناء الاعتماد');
     return CertificationReport(startedAt: started, completedAt: DateTime.now(), results: results);
   }
 
@@ -113,8 +119,22 @@ class CertificationService {
         details: value == null ? 'لم تصل قراءة صحيحة' : 'قيمة: $value'));
   }
 
-  Future<void> _dtc(List<CertificationResult> out, String id, String title, Future<List<String>> Function() read) async {
+  Future<void> _dtc(List<CertificationResult> out, String id, String title, String command, int responseMode, Future<List<String>> Function() read) async {
     final codes = await read();
-    out.add(CertificationResult(id: id, title: title, status: CertificationStatus.pass, details: '${codes.length} كود')); 
+    final capture = session.rawCapture.entries.reversed.where((e) => e.command.toUpperCase() == command).firstOrNull;
+    if (capture == null) {
+      out.add(CertificationResult(id: id, title: title, status: CertificationStatus.fail, details: 'لم يُسجل رد الأمر $command'));
+      return;
+    }
+    final bytes = ObdResponseUtils.extractBytes(capture.rawResponse);
+    final valid = !capture.isError && bytes.isNotEmpty && bytes.first == responseMode;
+    out.add(CertificationResult(id: id, title: title, status: valid ? CertificationStatus.pass : CertificationStatus.fail,
+        details: valid ? '${codes.length} كود • رد صالح' : 'الرد غير صالح أو يحتوي خطأ: ${capture.rawResponse.trim()}'));
+  }
+
+  bool _parserSelfTest() {
+    final compact = ObdResponseUtils.extractBytes('410C0000');
+    final spaced = ObdResponseUtils.extractBytes('41 0C 00 00');
+    return compact.length == 4 && spaced.length == 4 && compact.join(',') == spaced.join(',') && compact[0] == 0x41 && compact[1] == 0x0C;
   }
 }

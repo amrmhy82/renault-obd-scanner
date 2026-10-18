@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../diagnostics/dtc_history_repository.dart';
 import '../data/data_logger_service.dart';
+import '../reports/report_archive_service.dart';
 import '../models/trip_point.dart';
 import '../services/trip_log_service.dart';
 import '../telemetry/live_telemetry_service.dart';
@@ -27,9 +28,12 @@ class ObdConnectionController extends ChangeNotifier {
   LiveTelemetryService? _telemetry;
   StreamSubscription<VehicleState>? _telemetrySub;
   StreamSubscription<ElmSessionState>? _stateSub;
+  Timer? _connectionWatch;
+  bool? _lastTransportConnected;
   String? _deviceLabel;
   bool _isConnecting = false;
   bool _reposLoaded = false;
+  bool _archivedForDisconnect = false;
   final List<TripPoint> _currentTripPoints = [];
   DateTime _tripStartedAt = DateTime.now();
 
@@ -69,11 +73,21 @@ class ObdConnectionController extends ChangeNotifier {
     _isConnecting = false;
     _tripStartedAt = DateTime.now();
     _currentTripPoints.clear();
+    await ReportArchiveService.instance.beginSession();
+    _archivedForDisconnect = false;
 
     final telemetry = LiveTelemetryService(session);
     _telemetry = telemetry;
     _telemetrySub = telemetry.stream.listen(_onVehicleState);
     _stateSub = session.stateStream.listen((_) => notifyListeners());
+    _lastTransportConnected = session.isConnected;
+    _connectionWatch?.cancel();
+    _connectionWatch = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      final connected = session.isConnected;
+      if (connected == _lastTransportConnected) return;
+      _lastTransportConnected = connected;
+      notifyListeners();
+    });
     await dataLoggerService.start();
     telemetry.start();
     notifyListeners();
@@ -81,6 +95,10 @@ class ObdConnectionController extends ChangeNotifier {
 
   void _onVehicleState(VehicleState state) {
     dataLoggerService.record(state);
+    if (!state.connected) {
+      _archiveOnDisconnect();
+      return;
+    }
     final point = TripPoint(
       timestamp: state.lastUpdate,
       rpm: state['rpm']?.round(),
@@ -96,11 +114,47 @@ class ObdConnectionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> reconnect() async {
+    final session = _session;
+    if (session == null) return false;
+    setConnecting(true);
+    try {
+      final ok = await session.attemptReconnect();
+      if (ok && _archivedForDisconnect) {
+        session.rawCapture.clear();
+        await ReportArchiveService.instance.beginSession();
+        await dataLoggerService.start();
+        _archivedForDisconnect = false;
+      }
+      notifyListeners();
+      return ok;
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  Future<void> _archiveOnDisconnect() async {
+    if (_archivedForDisconnect || _session == null) return;
+    _archivedForDisconnect = true;
+    final session = _session!;
+    final rawCaptureJson = session.rawCapture.toJson();
+    await dataLoggerService.stop();
+    await ReportArchiveService.instance.finalizeSession(
+      rawCaptureJson: rawCaptureJson,
+      csvFile: dataLoggerService.currentFile,
+    );
+    notifyListeners();
+  }
+
   Future<void> _teardown() async {
     final session = _session;
     final telemetry = _telemetry;
+    final rawCaptureJson = session?.rawCapture.toJson();
     await _telemetrySub?.cancel();
     await _stateSub?.cancel();
+    _connectionWatch?.cancel();
+    _connectionWatch = null;
+    _lastTransportConnected = null;
     _telemetrySub = null;
     _stateSub = null;
     _session = null;
@@ -121,6 +175,14 @@ class ObdConnectionController extends ChangeNotifier {
 
     await tripLogService.flush();
     await _saveTripSummaryIfNeeded();
+    if (session != null && rawCaptureJson != null && !_archivedForDisconnect) {
+      await ReportArchiveService.instance.finalizeSession(
+        rawCaptureJson: rawCaptureJson,
+        csvFile: dataLoggerService.currentFile,
+      );
+    }
+    await ReportArchiveService.instance.resetSession();
+    _archivedForDisconnect = false;
     _currentTripPoints.clear();
   }
 

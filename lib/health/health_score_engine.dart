@@ -9,6 +9,7 @@ class HealthReport {
   final int confidencePercent;
   final List<String> availableIndicatorsAr;
   final List<String> missingIndicatorsAr;
+  final bool canAssess;
 
   const HealthReport({
     required this.score,
@@ -16,6 +17,7 @@ class HealthReport {
     required this.confidencePercent,
     required this.availableIndicatorsAr,
     required this.missingIndicatorsAr,
+    required this.canAssess,
   });
 }
 
@@ -127,6 +129,7 @@ class HealthScoreEngine {
     }
     final totalIndicators = PidRegistry.all.length + 1;
     final confidence = ((available.length / totalIndicators) * 100).round();
+    final canAssess = state.connected && dtcScanned && available.length >= 5;
 
     return HealthReport(
       score: score,
@@ -134,6 +137,7 @@ class HealthScoreEngine {
       confidencePercent: confidence,
       availableIndicatorsAr: available,
       missingIndicatorsAr: missing,
+      canAssess: canAssess,
     );
   }
 }

@@ -6,7 +6,8 @@ class SymptomCoverage {
             'symptom': s.id,
             'dtcReads': const ['03', '07', '0A'],
             'livePids': s.requiredPids,
-            'rules': 5,
+            'rules': s.ruleIds.length,
+            'ruleIds': s.ruleIds,
             'recommendations': s.recommendations.isNotEmpty,
           })
       .toList();

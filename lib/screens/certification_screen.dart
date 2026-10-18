@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../certification/certification_service.dart';
 import '../core/elm327_session.dart';
+import '../reports/report_archive_service.dart';
 
 class CertificationScreen extends StatefulWidget {
   final Elm327Session session;
@@ -21,6 +22,7 @@ class _CertificationScreenState extends State<CertificationScreen> {
     setState(() => _running = true);
     try {
       final report = await CertificationService(widget.session).run();
+      await ReportArchiveService.instance.recordJson('phase_0_certification', report.toJson());
       if (mounted) setState(() => _report = report);
     } finally {
       if (mounted) setState(() => _running = false);

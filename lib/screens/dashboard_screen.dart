@@ -30,6 +30,7 @@ class DashboardScreen extends StatefulWidget {
   final DtcHistoryRepository dtcHistoryRepository;
   final TripSummaryRepository tripSummaryRepository;
   final List<TripPoint> Function() getCurrentTripPoints;
+  final Future<bool> Function()? onReconnect;
 
   const DashboardScreen({
     super.key,
@@ -39,6 +40,7 @@ class DashboardScreen extends StatefulWidget {
     required this.dtcHistoryRepository,
     required this.tripSummaryRepository,
     required this.getCurrentTripPoints,
+    this.onReconnect,
   });
 
   @override
@@ -106,8 +108,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Icons.local_gas_station;
       case 'map':
         return Icons.compress;
-      case 'o2_b1s1':
-        return Icons.sensors;
       case 'timing_advance':
         return Icons.settings_suggest;
       case 'battery_voltage':
@@ -232,6 +232,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _pidGrid(List<PidDefinition> pids) {
+    final visible = _visiblePids(pids);
+    if (visible.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(bottom: 8),
+        child: Text('لا توجد قراءة صالحة متاحة حاليًا من ECU', style: TextStyle(color: Colors.grey)),
+      );
+    }
     return GridView.count(
       crossAxisCount: 2,
       childAspectRatio: 1.3,
@@ -239,7 +246,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       crossAxisSpacing: 8,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      children: pids.map((pid) {
+      children: visible.map((pid) {
         final value = _state[pid.key];
         return _card(
           pid.nameAr,
@@ -250,6 +257,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }).toList(),
     );
   }
+
+  List<PidDefinition> _visiblePids(List<PidDefinition> pids) => pids.where((pid) {
+        final field = _state.field(pid.key);
+        if (field == null) return false;
+        return widget.session.isPidSupported(pid.pidNumber) != false &&
+            field.value != null &&
+            field.quality != ValueQuality.missing &&
+            field.quality != ValueQuality.invalid &&
+            field.quality != ValueQuality.stale;
+      }).toList();
 
   Widget _sectionHeader(String titleAr, IconData icon, int count) {
     return Padding(
@@ -270,11 +287,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _connectionHint() {
+    final supported = PidRegistry.all
+        .where((pid) => widget.session.isPidSupported(pid.pidNumber) == true)
+        .length;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        'القياسات المؤكدة من ECU: $supported • القياسات غير المدعومة لا تُعرض كأعطال',
+        style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade600),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final banner = _sessionBanner();
     final basics = PidRegistry.byCategory(PidCategory.basics);
     final combustion = PidRegistry.byCategory(PidCategory.combustion);
+    final visibleBasics = _visiblePids(basics);
+    final visibleCombustion = _visiblePids(combustion);
     return Scaffold(
       appBar: AppBar(
         title: Text(_title),
@@ -316,31 +348,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ? Colors.red.shade50
                   : Colors.blueGrey.shade50,
               padding: const EdgeInsets.all(12),
-              child: Text(
-                banner,
-                style: TextStyle(
-                  color: _sessionState == ElmSessionState.communicationError
-                      ? Colors.red
-                      : Colors.blueGrey.shade700,
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '$banner${banner == "انقطع الاتصال بالمحول" ? " — تم إخفاء القيم القديمة" : ""}',
+                      style: TextStyle(
+                        color: _sessionState == ElmSessionState.communicationError
+                            ? Colors.red
+                            : Colors.blueGrey.shade700,
+                      ),
+                    ),
+                  ),
+                  if (banner == 'انقطع الاتصال بالمحول' && widget.onReconnect != null)
+                    TextButton.icon(
+                      onPressed: () { widget.onReconnect!(); },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('إعادة الاتصال'),
+                    ),
+                ],
               ),
             ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(12),
               children: [
-                _sectionHeader('البيانات الأساسية', Icons.dashboard, basics.length),
+                _connectionHint(),
+                _sectionHeader('البيانات الأساسية', Icons.dashboard, visibleBasics.length),
                 _pidGrid(basics),
                 const SizedBox(height: 24),
-                _sectionHeader('حساسات الاحتراق والوقود', Icons.local_fire_department, combustion.length),
+                _sectionHeader('حساسات الاحتراق والوقود', Icons.local_fire_department, visibleCombustion.length),
                 _pidGrid(combustion),
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Text(
-                    'ملاحظة: ظهور "--" لأي قياس بعد اتصال كافٍ يعني أن وحدة الحقن '
-                    'في سيارتك لا تُبلّغ عن هذا PID تحديدًا. هذا ليس خللًا في '
-                    'التطبيق — راجع "سجل التصحيح (Debug)" لرؤية الرد الخام للتأكد.',
+                    'تظهر البطاقة فقط بعد وصول قراءة صالحة وحديثة من ECU. '
+                    'لرؤية المؤشرات التي لم ترد أو لم تُختبر، راجع سجل التصحيح.',
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                   ),
                 ),

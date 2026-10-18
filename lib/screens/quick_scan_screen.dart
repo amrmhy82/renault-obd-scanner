@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../core/elm327_session.dart';
 import '../quick_scan/quick_scan_service.dart';
 import '../quick_scan/quick_scan_history.dart';
+import '../reports/report_archive_service.dart';
 import '../vehicle/vehicle_profile_repository.dart';
 
 class QuickScanScreen extends StatefulWidget {
@@ -37,6 +38,7 @@ class _QuickScanScreenState extends State<QuickScanScreen> {
     try {
       final report = await QuickScanService(widget.session).run(onStep: (step) { if (mounted) setState(() => _step = step); });
       await QuickScanHistory().save(report);
+      await ReportArchiveService.instance.recordJson('quick_scan', report.toJson());
       if (report.vin != null) {
         final profiles = VehicleProfileRepository();
         await profiles.load();

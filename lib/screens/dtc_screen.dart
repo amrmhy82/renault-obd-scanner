@@ -3,6 +3,7 @@ import '../core/elm327_session.dart';
 import '../data/dtc_database.dart';
 import '../diagnostics/dtc_history_entry.dart';
 import '../diagnostics/dtc_history_repository.dart';
+import '../reports/report_archive_service.dart';
 
 class DtcScreen extends StatefulWidget {
   final Elm327Session session;
@@ -49,6 +50,12 @@ class _DtcScreenState extends State<DtcScreen> {
         widget.session.readPermanentDtcs(),
       ]);
       final codes = results[0];
+      await ReportArchiveService.instance.recordJson('dtc_scan', <String, Object?>{
+        'timestamp': DateTime.now().toIso8601String(),
+        'active': codes,
+        'pending': results[1],
+        'permanent': results[2],
+      });
       await widget.historyRepository.recordScan(codes);
       setState(() {
         _activeCodes = codes;
