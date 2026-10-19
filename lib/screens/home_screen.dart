@@ -16,6 +16,7 @@ import 'symptom_screen.dart';
 import 'quick_scan_screen.dart';
 import 'trip_log_screen.dart';
 import 'settings_screen.dart';
+import 'renault_resource_capture_screen.dart';
 
 /// الشاشة الرئيسية الفعلية للتطبيق — تُفتح دائمًا بلا شرط اتصال. الاتصال
 /// بالمحول أصبح إجراءً اختياريًا يُطلب من هنا (بطاقة الحالة أعلى الشاشة)،
@@ -207,6 +208,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 subtitle: 'تشغيل اختبارات الجاهزية وتصدير تقرير موثق',
                 enabled: connected,
                 onTap: () => _openIfConnected(() => CertificationScreen(session: c.session!)),
+              ),
+              _menuTile(
+                icon: Icons.travel_explore,
+                title: 'جمع موارد Renault',
+                subtitle: 'حزمة قراءة فقط لبناء تعريفات السيارة لاحقًا',
+                enabled: connected,
+                onTap: () => _openIfConnected(() => RenaultResourceCaptureScreen(session: c.session!)),
               ),
 
               const SizedBox(height: 12),

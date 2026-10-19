@@ -54,6 +54,7 @@ class Elm327Session {
   /// Returns whether a PID is advertised by the ECU, or null when the
   /// capability bitmap has not been obtained / does not cover that PID.
   bool? isPidSupported(int pid) {
+    if (pid == -1) return true;
     if (_unsupportedPids.contains(pid)) return false;
     final supported = _supportedPids;
     if (supported == null) return null;
@@ -224,6 +225,7 @@ class Elm327Session {
   }
 
   Future<num?> readPid(PidDefinition pid) async {
+    if (pid.adapterValue) return readAdapterVoltage();
     final raw = await _send(pid.command);
     if (ObdResponseUtils.hasError(raw)) {
       if (raw.toUpperCase().contains('NO DATA')) {
@@ -244,6 +246,43 @@ class Elm327Session {
     _unsupportedPids.remove(pid.pidNumber);
     return pid.parse(bytes);
   }
+
+  /// Reads the voltage measured by the ELM chip at the OBD connector.
+  /// This is adapter/input voltage, not a guaranteed direct battery measurement.
+  Future<num?> readAdapterVoltage() async {
+    final raw = await _send('ATRV');
+    if (ObdResponseUtils.hasError(raw)) return null;
+    final match = RegExp(r'(\d+(?:\.\d+)?)\s*V?', caseSensitive: false).firstMatch(raw);
+    return match == null ? null : double.tryParse(match.group(1)!);
+  }
+
+  /// Read-only adapter identity and protocol metadata. These values describe
+  /// the ELM327 interface, not a Renault ECU identification.
+  Future<Map<String, String?>> readAdapterInfo() async {
+    final identity = await _send('ATI');
+    final description = await _send('AT@1');
+    return {
+      'identity': _cleanAdapterText(identity),
+      'description': _cleanAdapterText(description),
+    };
+  }
+
+  Future<Map<String, String?>> readProtocolInfo() async {
+    final protocolNumber = await _send('ATDPN');
+    final protocolDescription = await _send('ATDP');
+    return {
+      'number': _cleanAdapterText(protocolNumber),
+      'description': _cleanAdapterText(protocolDescription),
+    };
+  }
+
+  String? _cleanAdapterText(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty || ObdResponseUtils.hasError(value)) return null;
+    return value;
+  }
+
+  Future<num?> readDefinition(PidDefinition pid) => readPid(pid);
 
   /// قراءة أكواد الأعطال النشطة حاليًا (Mode 03)
   Future<List<String>> readRawDtcs() => _readDtcs('03', 0x43);
@@ -304,6 +343,10 @@ class Elm327Session {
   /// Generic Mode 06 capture. Decoding MID/TID is ECU-specific and remains
   /// unconfirmed until a verified definition is available.
   Future<String> readMode06Raw() => _send('06');
+
+  /// Raw Mode 06 capability query. TID/MID meanings remain unconfirmed
+  /// until an ECU-specific definition is verified.
+  Future<String> readMode06SupportedRaw() => _send('0600');
 
   Future<List<int>?> readReadiness() async {
     final raw = await _send('0101');

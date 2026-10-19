@@ -65,12 +65,12 @@ class HealthScoreEngine {
       severity: HealthSeverity.warning,
       scoreImpact: -20,
       condition: (state, dtcs) {
-        final v = state['battery_voltage'];
+        final v = state['battery_voltage'] ?? state['adapter_voltage'];
         final rpm = state['rpm'];
         return v != null && rpm != null && rpm > 500 && v < 13.2;
       },
       explanation: (state, dtcs) =>
-          'جهد نظام الكهرباء ${state['battery_voltage']?.toStringAsFixed(2)} فولت أثناء دوران المحرك، وهو أقل من نطاق الشحن الطبيعي التقريبي (13.5–14.5 فولت).',
+          'جهد القياس ${v?.toStringAsFixed(2)} فولت أثناء دوران المحرك، وهو أقل من نطاق الشحن الطبيعي التقريبي (13.5–14.5 فولت).',
       recommendation: 'تحقق من المولّد (الدينمو) وسيور المحرك وتوصيلات البطارية عند فرصة قريبة.',
     ),
     HealthRule(
@@ -79,11 +79,11 @@ class HealthScoreEngine {
       severity: HealthSeverity.warning,
       scoreImpact: -15,
       condition: (state, dtcs) {
-        final v = state['battery_voltage'];
+        final v = state['battery_voltage'] ?? state['adapter_voltage'];
         return v != null && v < 11.8;
       },
       explanation: (state, dtcs) =>
-          'جهد البطارية ${state['battery_voltage']?.toStringAsFixed(2)} فولت، وهو منخفض عن الطبيعي.',
+          'جهد القياس ${v?.toStringAsFixed(2)} فولت، وهو منخفض عن الطبيعي. هذه قراءة منفذ OBD وقد لا تساوي جهد البطارية مباشرة.',
       recommendation: 'قد تحتاج البطارية شحنًا أو فحصًا أو استبدالًا إذا تكرر هذا مع تشغيل المحرك.',
     ),
   ];

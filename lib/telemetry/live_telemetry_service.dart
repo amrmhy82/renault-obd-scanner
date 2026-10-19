@@ -79,7 +79,7 @@ class LiveTelemetryService {
       }
 
       try {
-        final value = await session.readPid(duePid);
+        final value = await session.readDefinition(duePid);
         if (value != null) {
           final receivedAt = DateTime.now();
           final previous = _lastUpdated[duePid.key];

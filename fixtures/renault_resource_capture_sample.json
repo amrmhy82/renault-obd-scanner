@@ -1,0 +1,17 @@
+{
+  "captureVersion": "2.0",
+  "capturedAt": "2026-01-01T00:00:00.000Z",
+  "status": "complete",
+  "safety": {"readOnly": true, "writeServicesSent": [], "arbitraryCanProbing": false},
+  "adapter": {"identity": "ELM327", "description": "sample"},
+  "protocolBefore": {"number": "0", "description": "AUTO"},
+  "protocolAfter": {"number": "0", "description": "AUTO"},
+  "vehicle": {"vin": null},
+  "supportedPids": [],
+  "dtcs": {"active": [], "pending": [], "permanent": []},
+  "readinessBytes": null,
+  "mode06": {"supportedRaw": "NO DATA", "dataRaw": "NO DATA"},
+  "freezeFrame": {"raw": null, "associatedActiveDtc": null},
+  "rawCapture": [],
+  "requiredResourcesForLater": []
+}

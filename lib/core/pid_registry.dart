@@ -14,6 +14,7 @@ class PidDefinition {
   final String command; // مثل '010C'
   final PollClass pollClass;
   final PidCategory category;
+  final bool adapterValue;
 
   /// bytes هنا هي كل البايتات المستخرجة من الرد (تشمل 41 ورقم الـ PID نفسه)
   final num? Function(List<int> bytes) parse;
@@ -25,10 +26,11 @@ class PidDefinition {
     required this.command,
     required this.pollClass,
     this.category = PidCategory.basics,
+    this.adapterValue = false,
     required this.parse,
   });
 
-  int get pidNumber => int.parse(command.substring(2), radix: 16);
+  int get pidNumber => adapterValue ? -1 : int.parse(command.substring(2), radix: 16);
 }
 
 /// سجل موحّد لكل PIDs المدعومة. إضافة قياس جديد تكون بإضافة عنصر واحد هنا
@@ -39,6 +41,15 @@ class PidDefinition {
 class PidRegistry {
   static final List<PidDefinition> all = [
     // ═══════════════════════ الأساسيات (Basics) ═══════════════════════
+    PidDefinition(
+      key: 'adapter_voltage',
+      nameAr: 'جهد المحول من منفذ OBD',
+      unit: 'V',
+      command: 'ATRV',
+      pollClass: PollClass.medium,
+      adapterValue: true,
+      parse: (_) => null,
+    ),
     PidDefinition(
       key: 'rpm',
       nameAr: 'دورات المحرك',

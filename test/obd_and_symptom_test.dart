@@ -3,11 +3,13 @@ import 'package:matal_fluence_scan/core/obd_response_utils.dart';
 import 'package:matal_fluence_scan/core/pid_registry.dart';
 import 'package:matal_fluence_scan/core/transport.dart';
 import 'package:matal_fluence_scan/core/elm327_session.dart';
+import 'package:matal_fluence_scan/core/simulated_transport.dart';
 import 'package:matal_fluence_scan/health/health_score_engine.dart';
 import 'package:matal_fluence_scan/symptoms/symptom_diagnostic_service.dart';
 import 'package:matal_fluence_scan/symptoms/symptom_models.dart';
 import 'package:matal_fluence_scan/symptoms/symptom_registry.dart';
 import 'package:matal_fluence_scan/telemetry/vehicle_state.dart';
+import 'package:matal_fluence_scan/resources/renault_resource_capture_service.dart';
 
 class _TestTransport implements Transport {
   @override
@@ -43,6 +45,15 @@ void main() {
       expect(PidRegistry.byKey('map').parse([0x41, 0x0B, 90]), 90);
       expect(PidRegistry.byKey('throttle').parse([0x41, 0x11, 255]), 100);
     });
+
+    test('reads ATRV as adapter voltage and captures the command', () async {
+      final transport = SimulatedElm327Transport(responses: {'ATRV': '12.6V'});
+      final session = Elm327Session(transport);
+      final voltage = await session.readAdapterVoltage();
+      expect(voltage, 12.6);
+      expect(transport.sentCommands, contains('ATRV'));
+      expect(session.rawCapture.entries.single.rawResponse, '12.6V');
+    });
   });
 
   group('health coverage', () {
@@ -51,6 +62,12 @@ void main() {
       expect(report.canAssess, isFalse);
       expect(report.confidencePercent, 0);
     });
+  });
+
+  test('resource capture command policy contains only standard read-only commands', () {
+    expect(RenaultResourceCaptureService.standardReadOnlyCommands, isNot(contains('04')));
+    expect(RenaultResourceCaptureService.standardReadOnlyCommands, isNot(contains('ATSH 7E0')));
+    expect(RenaultResourceCaptureService.standardReadOnlyCommands, containsAll(['0902', '03', '06', '0200', 'ATRV']));
   });
 
   group('symptom rules', () {

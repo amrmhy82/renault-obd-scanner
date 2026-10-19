@@ -59,12 +59,14 @@ class QuickScanService {
     if (readiness == null) {
       items.add(const QuickScanItem(title: 'جاهزية أنظمة الانبعاثات', value: 'غير متاحة', detail: 'لم يرد ECU على 0101', severity: QuickScanSeverity.unavailable));
     } else {
-      final mil = (readiness[2] & 0x80) != 0;
-      final monitors = readiness[2] & 0x7F;
-      final incomplete = readiness[3] & 0x7F;
-      final detail = 'MIL: ${mil ? "مضيئة" : "منطفئة"} • مكتملة: $monitors • غير مكتملة: $incomplete';
-      items.add(QuickScanItem(title: 'جاهزية أنظمة الانبعاثات', value: mil ? 'تحتاج متابعة' : 'لا توجد إشارة MIL', detail: detail, severity: mil ? QuickScanSeverity.attention : QuickScanSeverity.ok));
-      if (incomplete > 0) recommendations.add('قد تكون بعض اختبارات الجاهزية غير مكتملة بعد فصل البطارية أو مسح الأكواد.');
+      // Mode 01 PID 01 returns A/B/C/D: A contains MIL and stored DTC count.
+      // The previous code read MIL from C, which could report a false warning.
+      final mil = (readiness[0] & 0x80) != 0;
+      final storedDtcCount = readiness[0] & 0x7F;
+      final detail = 'MIL: ${mil ? "مضيئة" : "منطفئة"} • عدد الأكواد في ECU: $storedDtcCount • بيانات الجاهزية الخام: ${readiness.map((b) => b.toRadixString(16).padLeft(2, "0").toUpperCase()).join(" ")}';
+      final severity = mil || storedDtcCount > 0 ? QuickScanSeverity.attention : QuickScanSeverity.ok;
+      items.add(QuickScanItem(title: 'جاهزية أنظمة الانبعاثات', value: mil ? 'تحتاج متابعة' : 'لا توجد إشارة MIL', detail: detail, severity: severity));
+      if (!mil && storedDtcCount == 0) recommendations.add('لا توجد إشارة MIL أو أكواد مخزنة وفق رد 0101؛ تبقى اختبارات الجاهزية التفصيلية مرتبطة بتعريف ECU.');
     }
 
     onStep?.call('قراءة القياسات الأساسية');
@@ -77,6 +79,14 @@ class QuickScanService {
         items.add(QuickScanItem(title: pid.nameAr, value: '${_format(value)} ${pid.unit}', detail: 'قراءة مباشرة من ECU عبر ${pid.command}', severity: QuickScanSeverity.ok));
       }
     }
+    onStep?.call('قراءة جهد محول ELM327');
+    final adapterVoltage = await session.readAdapterVoltage();
+    items.add(QuickScanItem(
+      title: 'جهد المحول من منفذ OBD',
+      value: adapterVoltage == null ? 'غير متاح' : '${_format(adapterVoltage)} V',
+      detail: adapterVoltage == null ? 'ATRV • لم يرد المحول' : 'قراءة من شريحة ELM327 عبر ATRV، وليست قياسًا مباشرًا مضمونًا للبطارية',
+      severity: adapterVoltage == null ? QuickScanSeverity.unavailable : QuickScanSeverity.ok,
+    ));
 
     onStep?.call('قراءة Freeze Frame');
     final freezeFrame = await session.readFreezeFrameRaw();

@@ -112,6 +112,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Icons.settings_suggest;
       case 'battery_voltage':
         return Icons.battery_charging_full;
+      case 'adapter_voltage':
+        return Icons.power;
       case 'absolute_load':
         return Icons.bar_chart;
       case 'stft_b1':
