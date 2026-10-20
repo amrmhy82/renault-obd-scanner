@@ -1,4 +1,5 @@
 import '../core/elm327_session.dart';
+import '../core/raw_capture.dart';
 import '../reports/report_archive_service.dart';
 
 /// Collects only read-only, standard OBD evidence that can guide later
@@ -14,6 +15,8 @@ class RenaultResourceCaptureService {
 
   Future<Map<String, Object?>> run({void Function(String step)? onStep}) async {
     const captureVersion = '2.0';
+    final captureStartIndex = session.rawCapture.entries.length;
+    List<RawCaptureEntry> captureEntries() => session.rawCapture.entries.skip(captureStartIndex).toList();
     final report = <String, Object?>{
       'captureVersion': captureVersion,
       'capturedAt': DateTime.now().toIso8601String(),
@@ -35,9 +38,11 @@ class RenaultResourceCaptureService {
     };
     Future<void> checkpoint() async {
       report['updatedAt'] = DateTime.now().toIso8601String();
-      report['rawCaptureEntries'] = session.rawCapture.entries.length;
-      report['rawCapture'] = session.rawCapture.entries.map((entry) => entry.toJson()).toList();
-      report['commands'] = session.rawCapture.entries.map((entry) => entry.command).toSet().toList();
+      final entries = captureEntries();
+      report['rawCaptureEntries'] = entries.length;
+      report['sessionRawCaptureEntries'] = session.rawCapture.entries.length;
+      report['rawCapture'] = entries.map((entry) => entry.toJson()).toList();
+      report['commands'] = entries.map((entry) => entry.command).toSet().toList();
       await ReportArchiveService.instance.writePartialJson('renault_resource_capture', report);
     }
 

@@ -8,6 +8,7 @@ import '../core/bluetooth_classic_discovery.dart';
 import '../core/bluetooth_classic_transport.dart';
 import '../core/bluetooth_permissions.dart';
 import '../core/elm327_session.dart';
+import '../core/mock_replay_transport.dart';
 import '../core/obd_connection_controller.dart';
 import '../core/transport.dart';
 
@@ -295,6 +296,58 @@ class _ScanScreenState extends State<ScanScreen> {
   Widget _spinner() =>
       const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2));
 
+  Widget _buildDemoButton(BuildContext context) {
+    return Card(
+      color: Colors.amber.shade50,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.amber.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.directions_car, color: Colors.amber.shade900),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'وضع تجربة حقيقي (رينو فلوانس 2017)',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'محاكاة العدادات وحاسبة الرحلة من تسجيل حقيقي يحتوي على 1787 أمرًا، دون الاتصال بالسيارة.',
+              style: TextStyle(fontSize: 12, color: Colors.black87),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber.shade800,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('تشغيل جلسة المحاكاة'),
+              onPressed: _connectingKey == null
+                  ? () => _connectWith(
+                        transport: MockReplayTransport(preserveLatency: true),
+                        key: 'offline-demo',
+                        name: 'محاكاة Renault Fluence 2017',
+                      )
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _bleTile(BleFoundDevice d) {
     final title = d.name.isNotEmpty ? d.name : 'جهاز غير مسمّى';
     return Card(
@@ -443,6 +496,8 @@ class _ScanScreenState extends State<ScanScreen> {
               onSelectionChanged: (s) => _setMode(s.first),
             ),
             const SizedBox(height: 16),
+            _buildDemoButton(context),
+            const SizedBox(height: 12),
             if (_error != null)
               Container(
                 margin: const EdgeInsets.only(bottom: 16),

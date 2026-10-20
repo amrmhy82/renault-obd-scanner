@@ -37,6 +37,7 @@ flutter:
   assets:
     - assets/dtc_codes_ar.json
     - assets/icon/app_icon.png
+    - assets/fixtures/fluence_real_capture.json
 
 # إعدادات مولّد أيقونة التطبيق — شغّل الأمر التالي بعد flutter pub get:
 #   dart run flutter_launcher_icons

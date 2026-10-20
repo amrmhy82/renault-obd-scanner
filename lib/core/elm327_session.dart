@@ -277,7 +277,7 @@ class Elm327Session {
   }
 
   String? _cleanAdapterText(String raw) {
-    final value = raw.trim();
+    final value = raw.replaceAll(RegExp(r'[\r\n>]+'), ' ').trim();
     if (value.isEmpty || ObdResponseUtils.hasError(value)) return null;
     return value;
   }
@@ -361,7 +361,7 @@ class Elm327Session {
   }
 
   String? _decodeDtc(int a, int b) {
-    if (a == 0 && b == 0) return null;
+    if ((a == 0 && b == 0) || (a == 0xFF && b == 0xFF)) return null;
     const prefixes = ['P', 'C', 'B', 'U'];
     final prefix = prefixes[(a >> 6) & 0x03];
     final digit1 = ((a >> 4) & 0x03).toString();

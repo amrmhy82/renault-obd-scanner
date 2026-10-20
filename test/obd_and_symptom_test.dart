@@ -10,6 +10,7 @@ import 'package:matal_fluence_scan/symptoms/symptom_models.dart';
 import 'package:matal_fluence_scan/symptoms/symptom_registry.dart';
 import 'package:matal_fluence_scan/telemetry/vehicle_state.dart';
 import 'package:matal_fluence_scan/resources/renault_resource_capture_service.dart';
+import 'package:matal_fluence_scan/core/mock_replay_transport.dart';
 
 class _TestTransport implements Transport {
   @override
@@ -46,6 +47,13 @@ void main() {
       expect(PidRegistry.byKey('throttle').parse([0x41, 0x11, 255]), 100);
     });
 
+    test('parses ISO-TP labelled DTC payloads without treating FF padding as a code', () {
+      final bytes = ObdResponseUtils.extractBytes('00A\r0:4A04FFFFFFFF\r1:FFFFFFFFFFFFFF');
+      expect(bytes.first, 0x4A);
+      expect(bytes[1], 0x04);
+      expect(bytes.skip(2).every((byte) => byte == 0xFF), isTrue);
+    });
+
     test('reads ATRV as adapter voltage and captures the command', () async {
       final transport = SimulatedElm327Transport(responses: {'ATRV': '12.6V'});
       final session = Elm327Session(transport);
@@ -68,6 +76,15 @@ void main() {
     expect(RenaultResourceCaptureService.standardReadOnlyCommands, isNot(contains('04')));
     expect(RenaultResourceCaptureService.standardReadOnlyCommands, isNot(contains('ATSH 7E0')));
     expect(RenaultResourceCaptureService.standardReadOnlyCommands, containsAll(['0902', '03', '06', '0200', 'ATRV']));
+  });
+
+  test('replays the real Fluence capture through the Transport contract', () async {
+    final transport = MockReplayTransport();
+    expect(await transport.connect(), isTrue);
+    final response = await transport.sendAndAwait('010C');
+    expect(response, contains('410C'));
+    expect(transport.sentCommands, contains('010C'));
+    await transport.disconnect();
   });
 
   group('symptom rules', () {

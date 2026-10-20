@@ -17,8 +17,12 @@ class ObdResponseUtils {
     final bytes = <int>[];
     for (final token in tokens) {
       // يتجاهل كلمات نصية مثل NO/DATA/SEARCHING (تحتوي حروفًا خارج A-F)
-      if (!RegExp(r'^[0-9A-Fa-f]+$').hasMatch(token)) continue;
-      final hex = token.length.isOdd ? token.substring(0, token.length - 1) : token;
+      // Some adapters prefix ISO-TP payloads with a frame label, e.g.
+      // 0:4A04FFFFFFFF. Parse only the payload and ignore odd-length frame
+      // markers such as 00A instead of silently dropping a nibble.
+      final payload = token.contains(':') ? token.substring(token.lastIndexOf(':') + 1) : token;
+      if (!RegExp(r'^[0-9A-Fa-f]+$').hasMatch(payload) || payload.length.isOdd) continue;
+      final hex = payload;
       for (int i = 0; i + 2 <= hex.length; i += 2) {
         bytes.add(int.parse(hex.substring(i, i + 2), radix: 16));
       }
