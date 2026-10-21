@@ -361,7 +361,9 @@ class Elm327Session {
   }
 
   String? _decodeDtc(int a, int b) {
-    if ((a == 0 && b == 0) || (a == 0xFF && b == 0xFF)) return null;
+    // Mode 0A may pad an otherwise valid response with FF bytes. A pair such
+    // as 04 FF is padding too, not a valid DTC (and must not become P04FF).
+    if (a == 0 || b == 0 || a == 0xFF || b == 0xFF) return null;
     const prefixes = ['P', 'C', 'B', 'U'];
     final prefix = prefixes[(a >> 6) & 0x03];
     final digit1 = ((a >> 4) & 0x03).toString();
