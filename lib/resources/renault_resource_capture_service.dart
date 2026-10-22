@@ -15,8 +15,13 @@ class RenaultResourceCaptureService {
 
   Future<Map<String, Object?>> run({void Function(String step)? onStep}) async {
     const captureVersion = '2.0';
-    final captureStartIndex = session.rawCapture.entries.length;
-    List<RawCaptureEntry> captureEntries() => session.rawCapture.entries.skip(captureStartIndex).toList();
+    // RawCaptureStore is bounded and can evict old entries while the session
+    // is running. A starting index therefore becomes invalid at capacity;
+    // timestamps keep the resource capture isolated even after rollover.
+    final captureStartedAt = DateTime.now();
+    List<RawCaptureEntry> captureEntries() => session.rawCapture.entries
+        .where((entry) => !entry.timestamp.isBefore(captureStartedAt))
+        .toList();
     final report = <String, Object?>{
       'captureVersion': captureVersion,
       'capturedAt': DateTime.now().toIso8601String(),

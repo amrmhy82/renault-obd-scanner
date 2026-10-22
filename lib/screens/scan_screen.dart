@@ -298,11 +298,11 @@ class _ScanScreenState extends State<ScanScreen> {
 
   Widget _buildDemoButton(BuildContext context) {
     return Card(
-      color: Colors.amber.shade50,
+      color: const Color(0xFFFFF4F2),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.amber.shade300),
+        side: const BorderSide(color: Color(0xFFE9A29B)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -311,12 +311,12 @@ class _ScanScreenState extends State<ScanScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.directions_car, color: Colors.amber.shade900),
+                const Icon(Icons.directions_car, color: Color(0xFF9E1B15)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'وضع تجربة حقيقي (رينو فلوانس 2017)',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF9E1B15)),
                   ),
                 ),
               ],
@@ -329,7 +329,7 @@ class _ScanScreenState extends State<ScanScreen> {
             const SizedBox(height: 10),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber.shade800,
+                backgroundColor: const Color(0xFF9E1B15),
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.play_arrow),

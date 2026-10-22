@@ -117,6 +117,10 @@ class _DtcScreenState extends State<DtcScreen> {
       _message = ok ? 'تم مسح الأعطال بنجاح.' : 'فشل مسح الأعطال.';
     });
     await _scan(); // إعادة فحص فورية للتحقق (Verify) بعد المسح
+    if (mounted && ok && (_activeCodes.isNotEmpty || _pendingCodes.isNotEmpty || _permanentCodes.isNotEmpty)) {
+      setState(() => _message =
+          'تم قبول أمر المسح، لكن بعض الأكواد ما زالت ظاهرة. قد يكون سبب العطل ما زال قائمًا أو أن ECU أعاد تسجيله فورًا.');
+    }
   }
 
   String _formatDate(DateTime d) =>
@@ -127,7 +131,7 @@ class _DtcScreenState extends State<DtcScreen> {
       case DtcSource.saeStandard:
         return Colors.green;
       case DtcSource.saeManufacturer:
-        return Colors.blue;
+        return const Color(0xFF9E1B15);
       case DtcSource.nonStandardFormat:
         return Colors.deepOrange;
       case DtcSource.unknown:
@@ -223,7 +227,9 @@ class _DtcScreenState extends State<DtcScreen> {
                 _secondaryCodesSection('الأعطال الدائمة (Mode 0A)', _permanentCodes),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
-                  onPressed: _activeCodes.isEmpty || _loading ? null : _clear,
+                  onPressed: (_activeCodes.isEmpty && _pendingCodes.isEmpty && _permanentCodes.isEmpty) || _loading
+                      ? null
+                      : _clear,
                   icon: const Icon(Icons.delete_outline),
                   label: const Text('مسح الأعطال وإطفاء الضوء'),
                   style: ElevatedButton.styleFrom(

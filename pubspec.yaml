@@ -37,6 +37,7 @@ flutter:
   assets:
     - assets/dtc_codes_ar.json
     - assets/icon/app_icon.png
+    - assets/icon/matal_logo.png
     - assets/fixtures/fluence_real_capture.json
 
 # إعدادات مولّد أيقونة التطبيق — شغّل الأمر التالي بعد flutter pub get:

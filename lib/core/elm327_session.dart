@@ -375,7 +375,11 @@ class Elm327Session {
   /// مسح أكواد الأعطال وإطفاء ضوء المحرك (Mode 04)
   Future<bool> clearDtcs() async {
     final raw = await _send('04');
-    return !ObdResponseUtils.hasError(raw);
+    if (ObdResponseUtils.hasError(raw)) return false;
+    final bytes = ObdResponseUtils.extractBytes(raw);
+    // OBD-II positive response to Mode 04 is 0x44. Do not report success
+    // merely because the adapter returned text such as OK or a prompt.
+    return bytes.isNotEmpty && bytes.first == 0x44;
   }
 
   void dispose() {

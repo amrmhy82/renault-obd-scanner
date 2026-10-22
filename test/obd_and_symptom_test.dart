@@ -62,6 +62,13 @@ void main() {
       expect(transport.sentCommands, contains('ATRV'));
       expect(session.rawCapture.entries.single.rawResponse, '12.6V');
     });
+
+    test('accepts DTC clear only after a positive 44 response', () async {
+      final accepted = Elm327Session(SimulatedElm327Transport(responses: {'04': '44'}));
+      final rejected = Elm327Session(SimulatedElm327Transport(responses: {'04': 'OK'}));
+      expect(await accepted.clearDtcs(), isTrue);
+      expect(await rejected.clearDtcs(), isFalse);
+    });
   });
 
   group('health coverage', () {

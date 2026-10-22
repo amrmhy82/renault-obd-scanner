@@ -116,13 +116,13 @@ class _TripLogScreenState extends State<TripLogScreen> {
             style: const TextStyle(color: Colors.grey),
           ),
           const SizedBox(height: 16),
-          _chartCard('السرعة (كم/س)', speedSpots, Colors.blue),
+          _chartCard('السرعة (كم/س)', speedSpots, const Color(0xFF9E1B15)),
           _chartCard('دورات المحرك (RPM)', rpmSpots, Colors.deepOrange),
           _chartCard('حرارة سائل التبريد (°م)', tempSpots, Colors.teal),
           const SizedBox(height: 8),
           Card(
             child: ListTile(
-              leading: const Icon(Icons.description_outlined, color: Colors.blueGrey),
+              leading: const Icon(Icons.description_outlined, color: Color(0xFF9E1B15)),
               title: const Text('سجل البيانات الكامل (CSV)'),
               subtitle: const Text(
                 'كل الحساسات مسجّلة لحظيًا — قابل للتصدير والتحليل خارج التطبيق.',

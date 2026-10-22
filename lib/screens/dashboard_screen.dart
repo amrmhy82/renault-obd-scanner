@@ -148,7 +148,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: Colors.blueGrey),
+            Icon(icon, color: const Color(0xFF9E1B15)),
             const SizedBox(height: 8),
             Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
             const SizedBox(height: 4),
@@ -275,14 +275,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.only(top: 8, bottom: 12),
       child: Row(
         children: [
-          Icon(icon, color: Colors.blueGrey.shade700),
+          Icon(icon, color: const Color(0xFF9E1B15)),
           const SizedBox(width: 8),
-          Text(titleAr, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey.shade700)),
+          Text(titleAr, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF6E2925))),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(color: Colors.blueGrey.shade50, borderRadius: BorderRadius.circular(10)),
-            child: Text('$count', style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade700)),
+            decoration: BoxDecoration(color: const Color(0xFFF5ECEB), borderRadius: BorderRadius.circular(10)),
+            child: Text('$count', style: const TextStyle(fontSize: 12, color: Color(0xFF6E2925))),
           ),
         ],
       ),
@@ -297,7 +297,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         'القياسات المؤكدة من ECU: $supported • القياسات غير المدعومة لا تُعرض كأعطال',
-        style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade600),
+        style: const TextStyle(fontSize: 12, color: Color(0xFF806F6D)),
       ),
     );
   }
@@ -348,7 +348,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               width: double.infinity,
               color: _sessionState == ElmSessionState.communicationError
                   ? Colors.red.shade50
-                  : Colors.blueGrey.shade50,
+                  : const Color(0xFFF3F1F1),
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
@@ -358,7 +358,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: TextStyle(
                         color: _sessionState == ElmSessionState.communicationError
                             ? Colors.red
-                            : Colors.blueGrey.shade700,
+                            : const Color(0xFF806F6D),
                       ),
                     ),
                   ),

@@ -67,14 +67,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _statusCard(ObdConnectionController c) {
     final connected = c.isConnected;
     return Card(
-      color: connected ? Colors.green.shade50 : Colors.blueGrey.shade50,
+      color: connected ? const Color(0xFFEAF5EE) : const Color(0xFFF3F1F1),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
             Icon(
               connected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
-              color: connected ? Colors.green.shade700 : Colors.blueGrey,
+              color: connected ? const Color(0xFF2E7D52) : const Color(0xFF8A7775),
               size: 32,
             ),
             const SizedBox(width: 12),
@@ -116,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     return Card(
       child: ListTile(
-        leading: Icon(icon, color: enabled ? Colors.blueGrey : Colors.grey.shade400),
+        leading: Icon(icon, color: enabled ? const Color(0xFF9E1B15) : Colors.grey.shade400),
         title: Text(title, style: TextStyle(color: enabled ? null : Colors.grey)),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
         trailing: const Icon(Icons.chevron_left),
@@ -133,7 +133,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_title)),
+      appBar: AppBar(
+        title: Text(_title),
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Image.asset('assets/icon/matal_logo.png'),
+        ),
+      ),
       body: ListenableBuilder(
         listenable: widget.controller,
         builder: (context, _) {
