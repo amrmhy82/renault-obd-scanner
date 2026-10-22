@@ -34,6 +34,7 @@ class ObdConnectionController extends ChangeNotifier {
   bool _isConnecting = false;
   bool _reposLoaded = false;
   bool _archivedForDisconnect = false;
+  VehicleState? _latestState;
   final List<TripPoint> _currentTripPoints = [];
   DateTime _tripStartedAt = DateTime.now();
 
@@ -43,6 +44,7 @@ class ObdConnectionController extends ChangeNotifier {
   bool get isConnecting => _isConnecting;
   bool get isConnected => _session != null && _session!.isConnected;
   List<TripPoint> get currentTripPoints => _currentTripPoints;
+  VehicleState? get latestState => _latestState;
 
   Future<void> loadReposIfNeeded() async {
     if (_reposLoaded) return;
@@ -73,6 +75,7 @@ class ObdConnectionController extends ChangeNotifier {
     _isConnecting = false;
     _tripStartedAt = DateTime.now();
     _currentTripPoints.clear();
+    _latestState = VehicleState.initial();
     await ReportArchiveService.instance.beginSession();
     _archivedForDisconnect = false;
 
@@ -94,6 +97,8 @@ class ObdConnectionController extends ChangeNotifier {
   }
 
   void _onVehicleState(VehicleState state) {
+    _latestState = state;
+    notifyListeners();
     dataLoggerService.record(state);
     if (!state.connected) {
       _archiveOnDisconnect();
@@ -160,6 +165,7 @@ class ObdConnectionController extends ChangeNotifier {
     _session = null;
     _telemetry = null;
     _deviceLabel = null;
+    _latestState = null;
 
     telemetry?.dispose();
     if (session != null) {

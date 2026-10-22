@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/obd_connection_controller.dart';
+import '../telemetry/data_quality.dart';
+import '../telemetry/vehicle_state.dart';
 import '../debug/debug_log_screen.dart';
 import '../health/health_score_screen.dart';
 import '../maintenance/maintenance_screen.dart';
@@ -130,6 +132,229 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
       );
 
+  String _metricValue(VehicleState? state, String key, String unit) {
+    final field = state?.field(key);
+    if (field == null || field.value == null) return 'بانتظار القراءة';
+    switch (field.quality) {
+      case ValueQuality.stale:
+        return 'بيانات قديمة';
+      case ValueQuality.invalid:
+        return 'قراءة غير صالحة';
+      case ValueQuality.missing:
+        return 'غير متاحة';
+      case ValueQuality.degraded:
+      case ValueQuality.good:
+        final value = field.value!;
+        final decimals = key == 'rpm' || key == 'speed' || key == 'coolant_temp' ? 0 : 1;
+        return '${value.toStringAsFixed(decimals)} $unit';
+    }
+  }
+
+  Widget _metricCard({
+    required VehicleState? state,
+    required String key,
+    required String title,
+    required String unit,
+    required IconData icon,
+  }) {
+    final field = state?.field(key);
+    final available = field?.value != null && field?.quality == ValueQuality.good;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: const Color(0xFF9E1B15), size: 24),
+            const SizedBox(height: 10),
+            Text(title, style: const TextStyle(color: Color(0xFF806F6D), fontSize: 12)),
+            const SizedBox(height: 5),
+            Text(
+              _metricValue(state, key, unit),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: available ? 20 : 13,
+                fontWeight: FontWeight.bold,
+                color: available ? const Color(0xFF321B19) : const Color(0xFF9A8987),
+              ),
+            ),
+            if (field != null && field.timestamp != null)
+              Text(
+                '${field.ageMs(DateTime.now())} ms • ${field.quality.labelAr}',
+                style: const TextStyle(fontSize: 10, color: Color(0xFF9A8987)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _vehicleCard(VehicleProfileRepository profileRepo) {
+    final profile = profileRepo.profile;
+    return Card(
+      color: const Color(0xFFFFF8F7),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5DEDB),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.directions_car, color: Color(0xFF9E1B15), size: 32),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Renault Fluence', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    '${profile.year ?? 'السنة غير محددة'} • ${profile.engine ?? 'المحرك غير محدد'}',
+                    style: const TextStyle(color: Color(0xFF806F6D), fontSize: 12),
+                  ),
+                  const Text('Diagnostic & Vehicle Intelligence', style: TextStyle(color: Color(0xFF9E1B15), fontSize: 11)),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'بيانات السيارة',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VehicleProfileScreen())),
+              icon: const Icon(Icons.chevron_left),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _quickCard({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                child: Icon(icon, color: Colors.white, size: 25),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 3),
+                    Text(subtitle, style: const TextStyle(color: Color(0xFF806F6D), fontSize: 11)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_left, color: Color(0xFF9E1B15)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _quickActions(ObdConnectionController c) {
+    final connected = c.isConnected;
+    final actions = [
+      _quickCard(
+        icon: Icons.warning_amber_rounded,
+        color: const Color(0xFF2387E8),
+        title: 'قراءة الأعطال',
+        subtitle: 'عرض ومسح أكواد الأعطال',
+        onTap: () => _openIfConnected(() => DtcScreen(session: c.session!, historyRepository: c.dtcHistoryRepository)),
+      ),
+      _quickCard(
+        icon: Icons.monitor_heart_outlined,
+        color: const Color(0xFF16B879),
+        title: 'البيانات الحية',
+        subtitle: 'مراقبة الحساسات لحظيًا',
+        onTap: () => _openIfConnected(() => DashboardScreen(
+              session: c.session!,
+              telemetryService: c.telemetryService!,
+              tripLogService: c.tripLogService,
+              dtcHistoryRepository: c.dtcHistoryRepository,
+              tripSummaryRepository: c.tripSummaryRepository,
+              getCurrentTripPoints: () => c.currentTripPoints,
+              onReconnect: c.reconnect,
+            )),
+      ),
+      _quickCard(
+        icon: Icons.speed,
+        color: const Color(0xFF7851D9),
+        title: 'لوحة العدادات',
+        subtitle: 'تخصيص وعرض البيانات',
+        onTap: () => _openIfConnected(() => DashboardScreen(
+              session: c.session!,
+              telemetryService: c.telemetryService!,
+              tripLogService: c.tripLogService,
+              dtcHistoryRepository: c.dtcHistoryRepository,
+              tripSummaryRepository: c.tripSummaryRepository,
+              getCurrentTripPoints: () => c.currentTripPoints,
+              onReconnect: c.reconnect,
+            )),
+      ),
+      _quickCard(
+        icon: Icons.route,
+        color: const Color(0xFFF0444B),
+        title: 'الرحلات',
+        subtitle: 'تسجيل وتحليل الرحلات',
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TripComputerScreen(
+              getCurrentTripPoints: () => c.currentTripPoints,
+              tripSummaryRepository: c.tripSummaryRepository,
+            ))),
+      ),
+      _quickCard(
+        icon: Icons.build_outlined,
+        color: const Color(0xFFF39A19),
+        title: 'الصيانة',
+        subtitle: 'تذكيرات وإعادة ضبط الخدمة',
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MaintenanceScreen())),
+      ),
+      _quickCard(
+        icon: Icons.settings_input_component,
+        color: const Color(0xFF13B9D3),
+        title: 'ناقل الحركة CVT',
+        subtitle: connected ? 'بيانات Renault الخاصة غير متاحة' : 'يتطلب اتصالًا فعليًا',
+        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('قراءة CVT الخاصة تحتاج تعريف ECU Renault موثقًا.')),
+        ),
+      ),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 900 ? 3 : 1;
+        return GridView.count(
+          crossAxisCount: columns,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 2,
+          childAspectRatio: columns == 3 ? 2.6 : 3.2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: actions,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -148,7 +373,29 @@ class _HomeScreenState extends State<HomeScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              _vehicleCard(_profileRepo),
+              const SizedBox(height: 8),
               _statusCard(c),
+              const SizedBox(height: 8),
+              _sectionLabel('المقاييس الأساسية'),
+              LayoutBuilder(
+                builder: (context, constraints) => GridView.count(
+                crossAxisCount: constraints.maxWidth >= 900 ? 4 : 2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 2,
+                childAspectRatio: constraints.maxWidth >= 900 ? 1.05 : 1.35,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _metricCard(state: c.latestState, key: 'rpm', title: 'دورات المحرك', unit: 'RPM', icon: Icons.speed),
+                  _metricCard(state: c.latestState, key: 'speed', title: 'السرعة', unit: 'كم/س', icon: Icons.directions_car),
+                  _metricCard(state: c.latestState, key: 'coolant_temp', title: 'حرارة التبريد', unit: '°C', icon: Icons.thermostat),
+                  _metricCard(state: c.latestState, key: 'adapter_voltage', title: 'جهد منفذ OBD', unit: 'V', icon: Icons.bolt),
+                ],
+              )),
+              const SizedBox(height: 16),
+              _sectionLabel('الاختصارات الرئيسية'),
+              _quickActions(c),
               const SizedBox(height: 20),
 
               _sectionLabel('يحتاج اتصالًا نشطًا'),
