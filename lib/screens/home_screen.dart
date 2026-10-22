@@ -192,42 +192,69 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _vehicleCard(VehicleProfileRepository profileRepo) {
     final profile = profileRepo.profile;
+    final vin = profile.vin;
+    final maskedVin = vin == null || vin.isEmpty
+        ? 'VIN غير متاح'
+        : '${vin.substring(0, vin.length > 4 ? 4 : vin.length)}••••${vin.substring(vin.length > 4 ? vin.length - 4 : 0)}';
     return Card(
       color: const Color(0xFFFFF8F7),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5DEDB),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.directions_car, color: Color(0xFF9E1B15), size: 32),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Renault Fluence', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text(
-                    '${profile.year ?? 'السنة غير محددة'} • ${profile.engine ?? 'المحرك غير محدد'}',
-                    style: const TextStyle(color: Color(0xFF806F6D), fontSize: 12),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 185,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset('assets/icon/fluence_vehicle.jpg', fit: BoxFit.cover),
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.92),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        child: Text('Renault Fluence', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF182E52))),
+                      ),
+                    ),
                   ),
-                  const Text('Diagnostic & Vehicle Intelligence', style: TextStyle(color: Color(0xFF9E1B15), fontSize: 11)),
-                ],
-              ),
+                ),
+              ],
             ),
-            IconButton(
-              tooltip: 'بيانات السيارة',
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VehicleProfileScreen())),
-              icon: const Icon(Icons.chevron_left),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${profile.year ?? 'السنة غير محددة'} • ${profile.engine ?? 'المحرك غير محدد'} • ${profile.transmission ?? 'ناقل الحركة غير محدد'}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Color(0xFF806F6D), fontSize: 12),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(maskedVin, style: const TextStyle(color: Color(0xFF234B80), fontSize: 12)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'بيانات السيارة',
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VehicleProfileScreen())),
+                  icon: const Icon(Icons.chevron_left, color: Color(0xFF234B80)),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
