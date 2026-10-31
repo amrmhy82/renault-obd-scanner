@@ -64,6 +64,8 @@ class _SymptomScreenState extends State<SymptomScreen> {
                 const Text('اختر العرض الذي تريد فحصه', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 const Text('سيقرأ التطبيق البيانات المرتبطة بالعرض ويعرض الأدلة والاحتمالات، دون تشخيص قطعي للقطعة.'),
+                const SizedBox(height: 6),
+                const Text('علامة المعلومات تعني أن العرض يحتاج وحدة Renault متخصصة أو فحصًا ميكانيكيًا، وليس OBD العام وحده.', style: TextStyle(fontSize: 12, color: Colors.orange)),
                 const SizedBox(height: 12),
                 if (_running) ...[
                   const LinearProgressIndicator(),
@@ -73,8 +75,12 @@ class _SymptomScreenState extends State<SymptomScreen> {
                 ],
                 ...SymptomRegistry.all.map((symptom) => Card(
                   child: ListTile(
-                    leading: Icon(Icons.manage_search, color: symptom.severity == SymptomSeverity.high ? Colors.red : Colors.blueGrey),
-                    title: Text(symptom.nameAr),
+                    leading: Icon(Icons.manage_search, color: symptom.severity == SymptomSeverity.high ? Colors.red : const Color(0xFF9E1B15)),
+                    title: Row(children: [
+                      Expanded(child: Text(symptom.nameAr)),
+                      if (symptom.requiresSpecializedEcu)
+                        const Icon(Icons.info_outline, size: 18, color: Colors.orange),
+                    ]),
                     subtitle: Text(symptom.descriptionAr),
                     trailing: const Icon(Icons.chevron_left),
                     enabled: !_running,

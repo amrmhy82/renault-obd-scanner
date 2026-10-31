@@ -16,6 +16,7 @@ class SymptomDefinition {
   final List<String> ruleIds;
   final int idleSeconds;
   final int loadSeconds;
+  final bool requiresSpecializedEcu;
 
   const SymptomDefinition({
     required this.id,
@@ -29,6 +30,7 @@ class SymptomDefinition {
     this.ruleIds = const [],
     this.idleSeconds = 10,
     this.loadSeconds = 0,
+    this.requiresSpecializedEcu = false,
   });
 }
 
@@ -102,5 +104,6 @@ class SymptomReport {
         'uncertainties': uncertainties,
         'recommendations': recommendations,
         'coverage': coverage,
+        'requiresSpecializedEcu': symptom.requiresSpecializedEcu,
       };
 }

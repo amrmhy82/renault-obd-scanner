@@ -127,7 +127,7 @@ void main() {
     });
 
     test('every registered symptom has an explicit rule set', () {
-      expect(SymptomRegistry.all, hasLength(18));
+      expect(SymptomRegistry.all, hasLength(26));
       expect(SymptomRegistry.all.every((s) => s.ruleIds.isNotEmpty), isTrue);
     });
   });
